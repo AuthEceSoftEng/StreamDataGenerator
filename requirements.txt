@@ -1,0 +1,5 @@
+https://github.com/thdiaman/arffutils/tarball/master
+matplotlib==3.6.0
+pandas==1.5.3
+PyYAML==5.4.1
+regex==2022.9.13
