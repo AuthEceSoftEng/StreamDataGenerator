@@ -115,7 +115,7 @@ def generate(yamlinput):
     # Add __iter__ method
     clsoutput += "\n    def __iter__(self):\n"
     clsoutput += '        """\n        ' + "Generates and returns new data instances.\n\n"
-    clsoutput += "        :returns: A generator of tuples of the format (X, y), where is X is a list with feature\n" + \
+    clsoutput += "        :returns: A generator of tuples of the format (X, y), where X is a list with feature\n" + \
                  "                  instances and y is the target instance.\n"
     clsoutput += '        """\n'
     clsoutput += "        while True:\n"
