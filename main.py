@@ -36,4 +36,4 @@ if __name__ == '__main__':
     if args.gendoc:
         doc = generate_doc(args.output)
         with open(args.output[:-2] + "html", 'w') as outfile:
-            outfile.write(code + coderun)
+            outfile.write(doc)
