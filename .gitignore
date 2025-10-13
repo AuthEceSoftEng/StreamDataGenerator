@@ -137,6 +137,7 @@ dmypy.json
 sdg/examples/*.arff
 sdg/examples/*.csv
 sdg/examples/*.py
+sdg/examples/*.html
 
 # Local files
 notes.txt
