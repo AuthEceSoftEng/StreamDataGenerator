@@ -24,7 +24,7 @@ def _add_feature(featurename, formulacode, return_statement = False):
         matchspan = amatch.span()
         arguments = [arg.strip() for arg in amatch.group(2)[1:-1].split(',')]
         newformulacode = formulacode[:matchspan[0]]
-        if amatch.group(1) == "Categorical":
+        if amatch.group(1) == "UniformCategorical":
             newformulacode += _generate_categorical_random(arguments)
         if amatch.group(1) == "UniformInteger":
             newformulacode += _generate_uniform_integer_distribution(*arguments)

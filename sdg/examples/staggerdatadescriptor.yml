@@ -10,13 +10,13 @@ dataset:
   features:
     - name: size
       description: The size of the object, one of small, medium, large
-      formula: Categorical("small", "medium", "large")
+      formula: UniformCategorical("small", "medium", "large")
     - name: shape
       description: The shape of the object, one of circle, square, triangle
-      formula: Categorical("circle", "square", "triangle")
+      formula: UniformCategorical("circle", "square", "triangle")
     - name: color
       description: The color of the object, one of red, blue, green
-      formula: Categorical("red", "blue", "green")
+      formula: UniformCategorical("red", "blue", "green")
   target:
     name: y
     description: The target variable defined as a function of the features
