@@ -64,3 +64,9 @@ Formulas can be written in standard Python code and refer to other variables. Mo
 - `UniformCategorical(cat1, cat2, cat3, ...)`: returns one of the categories cat1, cat2, cat3, ... at random (uniformly)
 
 Examples of descriptor files can be found in folder [sdg/examples](sdg/examples).
+
+## Other tools
+In folder tools, you may find useful scripts to test your dataset generators:  
+- Script `datarun.py` allows running the dataset generators and printing the data
+- Script `dataplot.py` allows plotting data from the dataset generators
+- Script `dataexport.py` allows exporting data from the dataset generators as CSV or ARFF files

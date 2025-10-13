@@ -2,33 +2,45 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from random import seed, randint
 from sdg.examples.loandatagenerator import LoanDatasetStreamGenerator
-from sdg.examples.staggerdatagenerator import StaggerDataGenerator
 
-seed(42)
-numconceptdrifts = 4
-numdatadriftsperfeature = 4
+""" Set here the data generator (and import it in the code) """
+DataGenerator = LoanDatasetStreamGenerator
+
+""" Set here the number of instances """
 datasize = 10000
+
+""" Set here the sampling size for the plot """
 samplingsize = 100
 
-# Set here the data generator
-DataGenerator = StaggerDataGenerator
+""" Set here the random seed """
+randomseed = 42
+seed(randomseed)
+
+""" Set here the concept drift positions """
+""" If only their count is given, then they are produced randomly """
+conceptdrifts = 4
+if not isinstance(conceptdrifts, list):
+    conceptdrifts = [randint(100, datasize - 100) for _ in range(0, conceptdrifts)]
+numconceptdrifts = len(conceptdrifts)
+
+""" Set here the data drift positions for each feature """
+""" If only their count is given, then they are produced randomly """
+datadrifts, numdatadrifts = {}, {}
+datadrifts["salary"] = 4
+if not isinstance(datadrifts["salary"], list):
+    datadrifts["salary"] = [randint(100, datasize - 100) for _ in range(0, datadrifts["salary"])]
+numdatadrifts["salary"] = len(datadrifts["salary"])
 
 if __name__ == '__main__':
-    gen = DataGenerator(seed = 42)
+    gen = DataGenerator(seed = randomseed)
     print("Using data generator " + gen.dataset_name)
-
     print("Creating a dataset of " + str(datasize) + " instances")
     dataset = gen.get_n_instances(datasize)
-
-    conceptdrifts, datadrifts = [], {}
-    if gen.target_name in gen.driftable_variables:
-        conceptdrifts = [randint(100, datasize - 100) for _ in range(0, numconceptdrifts)]
-        print("   To also add " + str(numconceptdrifts) + " concept drifts")
-    datadriftfeatures = [var for var in gen.driftable_variables if var != gen.target_name]
-    if len(datadriftfeatures) > 0:
-        for feature in datadriftfeatures:
-            datadrifts[feature] = [randint(100, datasize - 100) for _ in range(0, numdatadriftsperfeature)]
-            print("   To also add " + str(numdatadriftsperfeature) + " data drifts for feature " + feature)
+    if numconceptdrifts > 0 and gen.target_name in gen.driftable_variables:
+        print("    with " + str(numconceptdrifts) + " concept drifts")
+    datadriftfeatures = [var for var in gen.driftable_variables if var != gen.target_name and var in datadrifts]
+    for feature in datadriftfeatures:
+        print("    with " + str(numconceptdrifts) + " data drifts for feature " + feature)
     print("\n")
 
     data = []
@@ -41,7 +53,6 @@ if __name__ == '__main__':
                 print("Data drift of feature %s at: %d" %(feature, i))
                 gen.data_drift(feature)
         data.append(X + [y])
-        # print("Index: {} - X: {} - y: {}".format(i, X, y))
     print("\n")
 
     df = pd.DataFrame(data, columns = gen.feature_names + [gen.target_name])
@@ -60,7 +71,6 @@ if __name__ == '__main__':
             df[column] = df[column].cat.codes
 
     axes = df.plot(subplots=True, figsize=(6.8, 6.2), color="#1f77b4", legend=False)
-
     for c, ax in enumerate(axes):
         cd, dd = [], []
         for i in conceptdrifts:
