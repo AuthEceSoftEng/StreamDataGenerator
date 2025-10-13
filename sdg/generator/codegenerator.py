@@ -188,10 +188,6 @@ def generate_run(yamlinput):
         runoutput += ", ".join(argument["name"] + " = " + str(argument["value"]) for argument in arguments)
         runoutput += ")\n"
         runoutput += "    for i, (X, y) in enumerate(gen):\n"
-        if "driftpositions" in yamlinput["run"]:
-            for driftposition in yamlinput["run"]["driftpositions"]:
-                runoutput += "        if " + " or ".join("i == " + str(position) for position in driftposition["positions"])
-                runoutput += ":\n            gen." + driftposition["type"] + "_drift(" + ("\"" + driftposition["variable"] + "\"" if "variable" in driftposition else "") + ")\n"
         runoutput += "        print(\"Index: {} - X: {} - y: {}\".format(i, X, y))\n"
     return runoutput
 

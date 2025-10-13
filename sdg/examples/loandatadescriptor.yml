@@ -67,9 +67,3 @@ dataset:
     arguments:
       - name: seed
         value: 42
-    driftpositions:
-      - positions: [100, 300]
-        type: data
-        variable: salary
-      - positions: [400]
-        type: concept
