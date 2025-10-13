@@ -21,11 +21,13 @@ YAML descriptor file that is given as input must have the following format:
 dataset:
   name: {{the name of the dataset generator}}
   description: {{the description of the dataset generator, can be multi-line}}
+  imports: {{any required imports, e.g. math}}
   parameters:
     - name: seed
       description: The seed of the random generator
     - name: {{any required parameter}}
       description: {{parameter description}}
+    - ...
   features:
     - name: {{the name of the first feature}}
       description: {{description of the feature}}
@@ -35,6 +37,7 @@ dataset:
         formulas:
           - name: {{optional name of this data drift choice}}
             value: {{formula of data drift choice}}
+          - ...
     - name: {{the name of the second feature}}
       description: {{description of the feature}}
       formula: {{formula of the feature}}
@@ -51,6 +54,7 @@ dataset:
           value: {{formula of concept drift choice}}
         - name: {{optional name of this second concept drift choice}}
           value: {{formula of concept drift choice}}
+        - ...
 ```
 
 Formulas can be written in standard Python code and refer to other variables. Moreover, they can include the functions:  
