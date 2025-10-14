@@ -55,6 +55,13 @@ dataset:
         - name: {{optional name of this second concept drift choice}}
           value: {{formula of concept drift choice}}
         - ...
+  run:
+    arguments:
+      - name: seed
+        value: 42
+      - name: {{name of the second parameter}}
+        value: {{value of the second parameter}}
+      - ...
 ```
 
 Formulas can be written in standard Python code and refer to other variables. Moreover, they can include the functions:  
@@ -63,7 +70,8 @@ Formulas can be written in standard Python code and refer to other variables. Mo
 - `Gaussian(mu, sigma)`: returns a random float from a Gaussian distribution with parameters mu and sigma
 - `UniformCategorical(cat1, cat2, cat3, ...)`: returns one of the categories cat1, cat2, cat3, ... at random (uniformly)
 
-Examples of descriptor files can be found in folder [sdg/examples](sdg/examples).
+Examples of descriptor files can be found in folder [sdg/examples](sdg/examples).  
+You can run all examples using script `runexamples.py`
 
 ## Other tools
 In folder tools, you may find useful scripts to test your dataset generators:  
