@@ -38,27 +38,15 @@ def _add_feature(featurename, formulacode, return_statement = False):
     else:
         return _indent_code(featurename + " = " + newformulacode, 3)
 
-def _generate_target_condition(conditions):
-    conditional = ""
-    if len(conditions) > 1:
-        conditional += "("
-        for condition in conditions[:-1]:
-            conditional += "(" + condition + ") or\n"
-    conditional += "(" + conditions[-1] + ")"
-    if len(conditions) > 1:
-        conditional += ")"
-    return conditional
-
 def _add_target(targetname, targettype, targetformula, return_statement = False):
     if targettype == "Binary":
-        conditions = [cond.strip() for cond in targetformula.split(',')]
-        targetcode = _generate_target_condition(conditions)
+        targetcode = targetformula
         newtargetcode = "if " + "\n                ".join(targetcode.split("\n")) + ":\n"
         newtargetcode += "    " + targetname + " = 1\n"
         newtargetcode += "else:\n"
         newtargetcode += "    " + targetname + " = 0"
     elif targettype == "Scalar":
-        newtargetcode = "            " + targetname + " = " + targetformula + "\n"
+        newtargetcode = targetname + " = " + targetformula
     if return_statement:
         return _indent_code(newtargetcode + "\nreturn " + targetname, 2)
     else:
@@ -128,11 +116,11 @@ def generate(yamlinput):
                 varfunctions.append("    def " + varfunctionnames[-1] + "(self):" + _add_feature(feature["name"], formula, True) + "\n")
         else:
             clsoutput += _add_feature(feature["name"], feature["formula"])
-    clsoutput += "\n\n"
+    clsoutput += "\n"
     # Code for target variable
     if "drift" in target:
         featurenames = ", ".join(feature["name"] for feature in features)
-        clsoutput += "            " + target["name"] + " = self." + target["name"] + "_function(" + featurenames + ")\n" 
+        clsoutput += "\n            " + target["name"] + " = self." + target["name"] + "_function(" + featurenames + ")\n" 
         for f, formula in enumerate([target["formula"]] + [df["value"] for df in target["drift"]["formulas"]]):
             varfunctionnames.append("_" + target["name"] + "_function_" + str(f))
             varfunctions.append("    def " + varfunctionnames[-1] + "(self, " + featurenames + "):  # @UnusedVariable" + _add_target(target["name"], target["classtype"], formula, True) + "\n")
@@ -151,27 +139,30 @@ def generate(yamlinput):
     clsoutput += "        return itertools.islice(self, numinstances)\n"
 
     # Add public drift functions
-    clsoutput += "\n    def data_drift(self, feature):\n"
-    clsoutput += '        """\n        ' + "Generates a data drift by randomly choosing a data\n"
-    clsoutput += "        generation function for the given variable.\n\n"
-    clsoutput += "        :param feature: the feature on which the data drift is performed\n"
-    clsoutput += '        """\n'
-    clsoutput += "        self._drift(feature)\n"
-    clsoutput += "\n    def concept_drift(self):\n"
-    clsoutput += '        """\n        ' + "Generates a concept drift by randomly choosing a\n"
-    clsoutput += "        generation function for the target variable.\n"
-    clsoutput += '        """\n'
-    clsoutput += "        self._drift(\"" + target["name"] + "\")\n"
+    if any("drift" in feature for feature in features): # if there is a data drift
+        clsoutput += "\n    def data_drift(self, feature):\n"
+        clsoutput += '        """\n        ' + "Generates a data drift by randomly choosing a data\n"
+        clsoutput += "        generation function for the given variable.\n\n"
+        clsoutput += "        :param feature: the feature on which the data drift is performed\n"
+        clsoutput += '        """\n'
+        clsoutput += "        self._drift(feature)\n"
+    if "drift" in target: # if there is a concept drift
+        clsoutput += "\n    def concept_drift(self):\n"
+        clsoutput += '        """\n        ' + "Generates a concept drift by randomly choosing a\n"
+        clsoutput += "        generation function for the target variable.\n"
+        clsoutput += '        """\n'
+        clsoutput += "        self._drift(\"" + target["name"] + "\")\n"
 
     # Add private drift function
-    clsoutput += "\n    def _drift(self, variable):\n"
-    for variable in [v for v in features + [target] if "drift" in v]:
-        clsoutput += "        if variable == \"" + variable["name"] + "\":\n"
-        clsoutput += "            newfunc = self." + variable["name"] + "_function\n"
-        functionnames = ["self." + vfn for vfn in varfunctionnames if vfn[1:].split("_function_")[0] == variable["name"]]
-        clsoutput += "            while newfunc == self." + variable["name"] + "_function:\n"
-        clsoutput += "                self." + variable["name"] + "_function = self._rng.choice([" + ", ".join(functionnames) + "])\n"
-    clsoutput += "\n"
+    if "drift" in target or any("drift" in feature for feature in features): # if there is a data drift or concept drift
+        clsoutput += "\n    def _drift(self, variable):\n"
+        for variable in [v for v in features + [target] if "drift" in v]:
+            clsoutput += "        if variable == \"" + variable["name"] + "\":\n"
+            clsoutput += "            newfunc = self." + variable["name"] + "_function\n"
+            functionnames = ["self." + vfn for vfn in varfunctionnames if vfn[1:].split("_function_")[0] == variable["name"]]
+            clsoutput += "            while newfunc == self." + variable["name"] + "_function:\n"
+            clsoutput += "                self." + variable["name"] + "_function = self._rng.choice([" + ", ".join(functionnames) + "])\n"
+        clsoutput += "\n"
 
     # Add variable functions
     for varfunction in varfunctions:
@@ -192,7 +183,7 @@ def generate_run(yamlinput):
     return runoutput
 
 if __name__ == '__main__':
-    datasetname = "stagger"
+    datasetname = "friedman"
     filename = "../examples/" + datasetname + "datadescriptor.yml"
     outputfilename = "../examples/" + datasetname + "datagenerator.py"
 

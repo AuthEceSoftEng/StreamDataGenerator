@@ -45,9 +45,9 @@ dataset:
       type: changeformula
       formulas:
         - value: age < 40 or 60 <= age
-        - value: [age < 40 and 50000 <= salary and salary <= 100000,
-                  age < 60 and 75000 <= salary and salary <= 125000,
-                  25000 <= salary and salary <= 75000]
+        - value: (age < 40 and 50000 <= salary and salary <= 100000) or
+                 (age < 60 and 75000 <= salary and salary <= 125000) or
+                 (25000 <= salary and salary <= 75000)
   run:
     arguments:
       - name: seed
