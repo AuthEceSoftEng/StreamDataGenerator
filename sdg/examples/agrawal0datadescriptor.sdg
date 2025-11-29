@@ -1,26 +1,26 @@
-dataset Agrawal0DataGenerator {
+dataset Agrawal0DataGenerator
     description: "Stream generator introduced by Agrawal et al.\n\n Relevant paper:\n Agrawal, R., Ghosh, S., Imielinski, T., Iyer, B., & Swami, A. N. (1992).\n An interval classifier for database mining applications. In VLDB (Vol. 92, pp. 560-573).\n Available online: https://agrawal-family.com/rakesh/papers/vldb92ic.pdf"
-    parameters {
+    parameters
         seed: "The seed of the random generator"
-    }
-    features {
-        salary: "Salary" = UniformFloat(20000, 150000)
-        commission: "Commission" = 0 if salary < 75000 else UniformFloat(10000, 75000)
-        age: "Age" = UniformInteger(20, 80)
-        educationlevel: "Education Level" = UniformInteger(0, 4)
-        car: "Car Maker" = UniformInteger(1, 20)
-        zipcode: "Zip Code of the Town" = UniformInteger(0, 8)
-        housevalue: "House Value" = UniformFloat(50000 * zipcode, 100000 * zipcode)
-        houseyears: "Years House Owned" = UniformInteger(1, 30)
-        loan: "Total Loan Amount" = UniformFloat(0, 500000)
-    }
-    target loanapproval: "Loan Approval (classification function 0 of the original paper is used)" {
-        type: Binary
+    end
+    features
+        salary: UniformFloat(20000, 150000), "Salary"
+        commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
+        age: UniformInteger(20, 80), "Age"
+        educationlevel: UniformInteger(0, 4), "Education Level"
+        car: UniformInteger(1, 20), "Car Maker"
+        zipcode: UniformInteger(0, 8), "Zip Code of the Town"
+        housevalue: UniformFloat(50000 * zipcode, 100000 * zipcode), "House Value"
+        houseyears: UniformInteger(1, 30), "Years House Owned"
+        loan: UniformFloat(0, 500000), "Total Loan Amount"
+    end
+    target loanapproval:Binary
+        description: "Loan Approval (classification function 0 of the original paper is used)"
         formula: age < 40 or 60 <= age
-        drift changeformula {
+        drift changeformula
             value: age < 40 or 60 <= age
             value: (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000)
-        }
-    }
+        end
+    end
     run seed=42
-}
+end

@@ -1,11 +1,11 @@
 Dataset:
-    'dataset' name=ID '{'
+    'dataset' name=ID
         ('description:' description=STRING)?
-        ('parameters' '{' parameters*=Parameter '}')?
-        ('features' '{' features*=Feature '}')?
+        ('parameters' parameters*=Parameter 'end')?
+        ('features' features*=Feature 'end')?
         'target' target=Target
         ('run' run_config=RunConfig)?
-    '}'
+    'end'
 ;
 
 Parameter:
@@ -18,17 +18,17 @@ Feature:
 ;
 
 Target:
-    name=ID ':' description=STRING '{'
-        'type:' type=ID
-        'formula:' Formula
+    name=ID ':' type=ID
+        'description:' description=STRING
+        'formula:' formula=Formula
         ('drift' drift=Drift)?
-    '}'
+    'end'
 ;
 
 Drift:
-    type=ID '{'
+    type=ID
         formulas*=DriftFormula
-    '}'
+    'end'
 ;
 
 DriftFormula:
@@ -48,6 +48,7 @@ Value:
 ;
 
 Formula:
-    // Match until a comma followed by a quote (for features) OR end of line (for others)
-    /(.+?(?=,\s*"))|([^\n]+)/
+    // Match until a comma followed by a quote AND end of line (for features)
+    // OR match everything until newline (for target/others)
+    /(.+?(?=,\s*"[^"]*"\s*(\r?\n|$)))|([^\n]+)/
 ;

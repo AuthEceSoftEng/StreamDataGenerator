@@ -36,81 +36,76 @@ print(model.target)
 python sdg/tools/convert_yaml.py sdg/examples/agrawal0datadescriptor.yml > output.sdg
 ```
 
-### Testing/Validating DSL Files
-
-```bash
-python sdg/tools/test_dsl.py sdg/examples/agrawal0.sdg
-```
-
 ## DSL Syntax Example
 
-```
-Dataset Agrawal0DataGenerator {
+```text
+dataset Agrawal0DataGenerator
     description: "Stream generator introduced by Agrawal et al."
     
-    parameters {
+    parameters
         seed: "The seed of the random generator"
-    }
+    end
     
-    features {
-        salary: "Salary" = UniformFloat(20000, 150000)
-        age: "Age" = UniformInteger(20, 80)
-        commission: "Commission" = 0 if salary < 75000 else UniformFloat(10000, 75000)
-    }
+    features
+        salary: UniformFloat(20000, 150000), "Salary"
+        age: UniformInteger(20, 80), "Age"
+        commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
+    end
     
-    target loanapproval: "Loan Approval" {
-        type: Binary
+    target loanapproval:Binary
+        description: "Loan Approval"
         formula: age < 40 or 60 <= age
-        drift changeformula {
+        drift changeformula
             value: age < 40 or 60 <= age
             value: (age < 40 and salary >= 50000) or (age >= 60)
-        }
-    }
+        end
+    end
     
-    run {
-        seed = 42
-    }
-}
+    run seed=42
+end
 ```
 
 ## Language Constructs
 
 ### Dataset
-Top-level container defining the entire dataset generator.
+Top-level container defining the entire dataset generator. Blocks are terminated with `end`.
 
 ### Parameters
-Input parameters for the generator (typically just the random `seed`).
+Input parameters for the generator.
+Syntax: `name: "Description"`
 
 ### Features
-Data features with:
-- Name and description
-- Formula (using distribution functions or expressions)
-- Optional drift specifications
+Data features.
+Syntax: `name: formula, "Description"`
 
 ### Target
-The target variable with:
-- Name and description
-- Type (`Binary` or `Scalar`)
-- Formula
-- Optional drift specifications
+The target variable.
+Syntax:
+```text
+target name:Type
+    description: "Description"
+    formula: ...
+end
+```
 
 ### Drift
 Concept or data drift definitions with multiple formula variants.
 
 ### Distribution Functions
-- `UniformFloat(min, max)` - Uniform float distribution
-- `UniformInteger(min, max)` - Uniform integer distribution
-- `Gaussian(mu, sigma)` - Gaussian distribution
-- `UniformCategorical(values...)` - Categorical distribution
+Supported in formulas:
+- `UniformFloat(min, max)`
+- `UniformInteger(min, max)`
+- `Gaussian(mu, sigma)`
+- `UniformCategorical("val1", "val2", ...)`
 
 ## Installation
 
-To use the DSL parser, install textX:
+To use the DSL parser, install textX and regex:
 
 ```bash
-pip install textX
+pip install textX regex
 ```
 
 ## Examples
 
-See the `examples/` directory for converted `.sdg` files from all YAML examples.
+See the `sdg/examples/` directory for converted `.sdg` files.

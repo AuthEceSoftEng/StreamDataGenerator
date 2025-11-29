@@ -1,29 +1,29 @@
-dataset LoanDatasetStreamGenerator {
+dataset LoanDatasetStreamGenerator
     description: "A stream generator for loans, introduced in publication:\n Kalaitzidis, E., Diamantopoulos, T., Michailoudis, A., Symeonidis, A. L. (2025).\n AML4S: An AutoML Pipeline for Data Streams. Machine Learning and Knowledge Extraction 7.3, 87.\n This generator is based on the generator introduced by Agrawal et al.\n (Agrawal, R., Ghosh, S., Imielinski, T., Iyer, B., & Swami, A. N. (1992).\n An interval classifier for database mining applications. In VLDB (Vol. 92, pp. 560-573).\n Available: https://agrawal-family.com/rakesh/papers/vldb92ic.pdf.)"
-    parameters {
+    parameters
         seed: "The seed of the random generator"
-    }
-    features {
-        salary: "Salary" = UniformFloat(20000, 60000)
-        drift changeformula {
+    end
+    features
+        salary: UniformFloat(20000, 60000), "Salary"
+        drift changeformula
             name: crisis value: UniformFloat(10000, 40000)
             name: growth value: UniformFloat(30000, 80000)
-        }
-        commission: "Commission" = UniformFloat(0, 0.1 * salary)
-        age: "Age" = UniformInteger(20, 80)
-        educationlevel: "Education Level" = UniformInteger(0, 4)
-        zipcode: "Zip Code of the Town" = UniformInteger(0, 8)
-        housevalue: "House Value" = UniformFloat(100000 * (8 - zipcode + 1), 2 * 100000 * (8 - zipcode + 1))
-        loanyears: "Years of the Loan" = UniformInteger(10, 30)
-        loan: "Total Loan Amount" = UniformFloat(10000, 0.85 * housevalue)
-    }
-    target loanapproval: "Loan Approval" {
-        type: Binary
+        end
+        commission: UniformFloat(0, 0.1 * salary), "Commission"
+        age: UniformInteger(20, 80), "Age"
+        educationlevel: UniformInteger(0, 4), "Education Level"
+        zipcode: UniformInteger(0, 8), "Zip Code of the Town"
+        housevalue: UniformFloat(100000 * (8 - zipcode + 1), 2 * 100000 * (8 - zipcode + 1)), "House Value"
+        loanyears: UniformInteger(10, 30), "Years of the Loan"
+        loan: UniformFloat(10000, 0.85 * housevalue), "Total Loan Amount"
+    end
+    target loanapproval:Binary
+        description: "Loan Approval"
         formula: (loan <= 20 * salary + 0.5 * commission) and (loan <= 0.7 * housevalue) and ((age < 20 and salary + 0.5 * commission >= 20000) or (age < 40 and salary + 0.5 * commission >= 25000) or (age < 60 and salary + 0.5 * commission >= 30000))
-        drift changeformula {
+        drift changeformula
             name: crisis value: (loan <= 10 * salary) and (loan <= 0.5 * housevalue) and ((age < 20 and salary >= 30000) or (age < 40 and salary >= 40000) or (age < 60 and salary >= 50000))
             name: growth value: (loan <= 50 * salary + commission) and (loan <= 0.9 * housevalue) and ((age < 20 and salary + commission >= 10000) or (age < 40 and salary + commission >= 15000) or (age < 60 and salary + commission >= 20000))
-        }
-    }
+        end
+    end
     run seed=42
-}
+end

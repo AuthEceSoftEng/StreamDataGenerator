@@ -12,7 +12,7 @@ def convert_yaml_to_dsl(yaml_file):
         data = yaml.safe_load(f)['dataset']
     
     lines = []
-    lines.append(f"dataset {data['name']} {{")
+    lines.append(f"dataset {data['name']}")
     
     # Description
     if 'description' in data:
@@ -21,51 +21,50 @@ def convert_yaml_to_dsl(yaml_file):
     
     # Parameters
     if 'parameters' in data:
-        lines.append("    parameters {")
+        lines.append("    parameters")
         for param in data['parameters']:
             desc = param['description'].replace('"', '\\"')
             lines.append(f'        {param["name"]}: "{desc}"')
-        lines.append("    }")
+        lines.append("    end")
     
     # Features
     if 'features' in data:
-        lines.append("    features {")
+        lines.append("    features")
         for feature in data['features']:
             desc = feature.get('description', feature['name']).replace('"', '\\"')
             formula = feature['formula']
-            # New syntax: name: formula, "description"
             lines.append(f'        {feature["name"]}: {formula}, "{desc}"')
             
             # Drift
             if 'drift' in feature:
                 drift = feature['drift']
-                lines.append(f"        drift {drift['type']} {{")
+                lines.append(f"        drift {drift['type']}")
                 for df in drift['formulas']:
                     name_part = f"name: {df['name']} " if 'name' in df else ""
                     value = df['value']
                     lines.append(f"            {name_part}value: {value}")
-                lines.append("        }")
+                lines.append("        end")
         
-        lines.append("    }")
+        lines.append("    end")
     
     # Target
     if 'target' in data:
         target = data['target']
         desc = target.get('description', target['name']).replace('"', '\\"')
-        lines.append(f'    target {target["name"]}: "{desc}" {{')
-        lines.append(f'        type: {target["classtype"]}')
+        lines.append(f'    target {target["name"]}:{target["classtype"]}')
+        lines.append(f'        description: "{desc}"')
         lines.append(f'        formula: {target["formula"]}')
         
         # Drift
         if 'drift' in target:
             drift = target['drift']
-            lines.append(f"        drift {drift['type']} {{")
+            lines.append(f"        drift {drift['type']}")
             for df in drift['formulas']:
                 name_part = f"name: {df['name']} " if 'name' in df else ""
                 value = df['value']
                 lines.append(f"            {name_part}value: {value}")
-            lines.append("        }")
-        lines.append("    }")
+            lines.append("        end")
+        lines.append("    end")
     
     # Run configuration
     if 'run' in data:
@@ -77,7 +76,7 @@ def convert_yaml_to_dsl(yaml_file):
             args.append(f'{arg["name"]}={val}')
         lines.append(f'    run {", ".join(args)}')
     
-    lines.append("}")
+    lines.append("end")
     return '\n'.join(lines)
 
 
