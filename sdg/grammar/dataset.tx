@@ -1,0 +1,53 @@
+Dataset:
+    'dataset' name=ID '{'
+        ('description:' description=STRING)?
+        ('parameters' '{' parameters*=Parameter '}')?
+        ('features' '{' features*=Feature '}')?
+        'target' target=Target
+        ('run' run_config=RunConfig)?
+    '}'
+;
+
+Parameter:
+    name=ID ':' description=STRING
+;
+
+Feature:
+    name=ID ':' formula=Formula ',' description=STRING
+    ('drift' drift=Drift)?
+;
+
+Target:
+    name=ID ':' description=STRING '{'
+        'type:' type=ID
+        'formula:' Formula
+        ('drift' drift=Drift)?
+    '}'
+;
+
+Drift:
+    type=ID '{'
+        formulas*=DriftFormula
+    '}'
+;
+
+DriftFormula:
+    ('name:' name=ID)? 'value:' value=Formula
+;
+
+RunConfig:
+    arguments+=Argument[',']
+;
+
+Argument:
+    name=ID '=' value=Value
+;
+
+Value:
+    INT | FLOAT | STRING | BOOL
+;
+
+Formula:
+    // Match until a comma followed by a quote (for features) OR end of line (for others)
+    /(.+?(?=,\s*"))|([^\n]+)/
+;

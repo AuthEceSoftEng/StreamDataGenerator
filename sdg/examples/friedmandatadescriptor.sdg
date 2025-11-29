@@ -1,0 +1,24 @@
+dataset FriedmanDataGenerator {
+    description: "Stream generator introduced by Friedman\n\n Relevant paper:\n Friedman, Jerome H. Multivariate Adaptive Regression Splines. The Annals of Statistics 19.1 (1991): 1-141.\n Available online: http://www.stat.yale.edu/~lc436/08Spring665/Mars_Friedman_91.pdf"
+    parameters {
+        seed: "The seed of the random generator"
+    }
+    features {
+        x1: "The first variable" = UniformFloat(0, 1)
+        x2: "The second variable" = UniformFloat(0, 1)
+        x3: "The third variable" = UniformFloat(0, 1)
+        x4: "The fourth variable" = UniformFloat(0, 1)
+        x5: "The fifth variable" = UniformFloat(0, 1)
+        x6: "The sixth variable" = UniformFloat(0, 1)
+        x7: "The seventh variable" = UniformFloat(0, 1)
+        x8: "The eighth variable" = UniformFloat(0, 1)
+        x9: "The ninth variable" = UniformFloat(0, 1)
+        x10: "The tenth variable" = UniformFloat(0, 1)
+        noise: "Noise of the target" = Gaussian(0, 1)
+    }
+    target y: "The target variable defined as a function of the features" {
+        type: Scalar
+        formula: 10 * math.sin(math.pi * x1 * x2) + 20 * (x3 - 0.5) ** 2 + 10 * x4 + 5 * x5 + noise
+    }
+    run seed=42
+}

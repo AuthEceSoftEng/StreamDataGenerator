@@ -1,0 +1,15 @@
+Dataset InvalidExample {
+    description: "Example with undefined variable reference"
+    parameters {
+        seed: "Random seed"
+    }
+    features {
+        x: "Feature X" = UniformFloat(0, 1)
+        y: "Feature Y" = 2 * undefined_var
+    }
+    target label: "Target" {
+        type: Binary
+        formula: y > x
+    }
+    run seed=42
+}
