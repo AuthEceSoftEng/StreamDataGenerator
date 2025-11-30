@@ -1,80 +1,136 @@
-# StreamDataGenerator
-Generator that creates data stream generators.
+# textX DSL for StreamDataGenerator
 
-## Usage
-First, install all required libraries using `pip install -r requirements.txt`  
-After that, run the following command to generate code for a dataset generator:
+This directory contains a formal Domain-Specific Language (DSL) for describing dataset generators, built using the textX framework.
 
-```
-python dataset_generator.py --input input.yaml --output output.py --strict --gendoc
-```
+## Overview
 
-The input is a YAML descriptor file and the output is a data stream generator as a Python file.  
-The documentation page of the data stream generator can also be generated using the `--gendoc` option.  
-Also, using the `--strict` option instructs the generator to treat all warnings as errors.
+The DSL provides a cleaner, more structured alternative to the YAML-based dataset descriptors. It offers:
+- **Formal grammar** with syntax validation
+- **Better tooling** support (IDE integration, syntax highlighting)
+- **Type safety** through grammar rules
+- **Cleaner syntax** that's more concise than YAML
 
-## Input format
-YAML descriptor file that is given as input must have the following format:
+## Grammar File
 
-```yaml
+- [`dataset.tx`](dataset.tx) - The textX grammar definition
 
-dataset:
-  name: {{the name of the dataset generator}}
-  description: {{the description of the dataset generator, can be multi-line}}
-  imports: {{any required imports, e.g. math}}
-  parameters:
-    - name: seed
-      description: The seed of the random generator
-    - name: {{any required parameter}}
-      description: {{parameter description}}
-    - ...
-  features:
-    - name: {{the name of the first feature}}
-      description: {{description of the feature}}
-      formula: {{formula of the feature}}
-      drift:
-        type: changeformula
-        formulas:
-          - name: {{optional name of this data drift choice}}
-            value: {{formula of data drift choice}}
-          - ...
-    - name: {{the name of the second feature}}
-      description: {{description of the feature}}
-      formula: {{formula of the feature}}
-    - ...
-  target:
-    name: {{the name of the target variable}}
-    description: {{description of the target variable}}
-    classtype: {{type of the target, one of Binary, Categorical, Scalar}}
-    formula: {{formula of the target cariable}}
-    drift:
-      type: changeformula
-      formulas:
-        - name: {{optional name of this first concept drift choice}}
-          value: {{formula of concept drift choice}}
-        - name: {{optional name of this second concept drift choice}}
-          value: {{formula of concept drift choice}}
-        - ...
-  run:
-    arguments:
-      - name: seed
-        value: 42
-      - name: {{name of the second parameter}}
-        value: {{value of the second parameter}}
-      - ...
+## Installation
+
+Install the package in editable mode:
+
+```bash
+pip install -e .
 ```
 
-Formulas can be written in standard Python code and refer to other variables. Moreover, they can include the functions:  
-- `UniformInteger(a, b)`: returns a random integer, uniformly distributed in range [a, b]
-- `UniformFloat(a, b)`: returns a random float, uniformly distributed in range [a, b]
-- `Gaussian(mu, sigma)`: returns a random float from a Gaussian distribution with parameters mu and sigma
-- `UniformCategorical(cat1, cat2, cat3, ...)`: returns one of the categories cat1, cat2, cat3, ... at random (uniformly)
+## CLI Usage
 
-Examples of descriptor files can be found in folder [sdg/examples](sdg/examples).  
-You can run all examples using script `runexamples.py`
+The package provides a `sdg` command-line interface.
 
-## Other tools
-In folder tools, you may find useful scripts to test your dataset generators:  
-- Script `datarun.py` allows running the dataset generators and printing the data
-- Script `dataplot.py` allows plotting data from the dataset generators
-- Script `dataexport.py` allows exporting data from the dataset generators as CSV or ARFF files
+### Validate a DSL file
+
+```bash
+sdg validate examples/dataset.sdg
+```
+
+### Generate Python Code
+
+```bash
+sdg generate examples/dataset.sdg -o output_generator.py
+```
+
+### Convert YAML to DSL
+
+```bash
+sdg convert-yaml examples/dataset.yml -o examples/dataset.sdg
+```
+
+## TextX CLI Integration
+
+The DSL and generator are registered with textX, so you can also use the standard `textx` command.
+
+### List Registered Languages and Generators
+
+```bash
+textx list-languages
+textx list-generators
+```
+
+### Generate Code using TextX
+
+```bash
+textx generate examples/dataset.sdg --target sdg_gen
+```
+
+## DSL Syntax Example
+
+```text
+dataset Agrawal0DataGenerator
+    description: "Stream generator introduced by Agrawal et al."
+    
+    parameters
+        seed: "The seed of the random generator"
+    end
+    
+    features
+        salary: UniformFloat(20000, 150000), "Salary"
+        age: UniformInteger(20, 80), "Age"
+        commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
+    end
+    
+    target loanapproval:Binary
+        description: "Loan Approval"
+        formula: age < 40 or 60 <= age
+        drift changeformula
+            value: age < 40 or 60 <= age
+            value: (age < 40 and salary >= 50000) or (age >= 60)
+        end
+    end
+    
+    run seed=42
+end
+```
+
+## Language Constructs
+
+### Dataset
+Top-level container defining the entire dataset generator. Blocks are terminated with `end`.
+
+### Parameters
+Input parameters for the generator.
+Syntax: `name: "Description"`
+
+### Features
+Data features.
+Syntax: `name: formula, "Description"`
+
+### Target
+The target variable.
+Syntax:
+```text
+target name:Type
+    description: "Description"
+    formula: ...
+end
+```
+
+### Drift
+Concept or data drift definitions with multiple formula variants.
+
+### Distribution Functions
+Supported in formulas:
+- `UniformFloat(min, max)`
+- `UniformInteger(min, max)`
+- `Gaussian(mu, sigma)`
+- `UniformCategorical("val1", "val2", ...)`
+
+## Installation
+
+To use the DSL parser, install textX and regex:
+
+```bash
+pip install textX regex
+```
+
+## Examples
+
+See the `sdg/examples/` directory for converted `.sdg` files.

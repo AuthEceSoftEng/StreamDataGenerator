@@ -1,0 +1,157 @@
+import random
+import itertools
+
+class {{ name }}:
+    """
+    {{ description }}
+
+    Features:
+    {%- for feature in features %}
+    - {{ feature.name }}: {{ feature.description }}
+    {%- endfor %}
+
+    Target:
+    - {{ target.name }}: {{ target.description }}
+    """
+    def __init__(self, {{ parameters|join(', ', attribute='name') }}):
+        """
+        Initializes this random data generator
+
+        {%- for param in parameters %}
+        :param {{ param.name }}: {{ param.description }}
+        {%- endfor %}
+        """
+        {%- for param in parameters %}
+        self.{{ param.name }} = {{ param.name }}
+        {%- endfor %}
+        self._rng = random.Random(self.seed)
+        {%- for feature in features if feature.has_drift %}
+        self.{{ feature.name }}_function = self._{{ feature.name }}_function_0
+        {%- endfor %}
+        {%- if target.has_drift %}
+        self.{{ target.name }}_function = self._{{ target.name }}_function_0
+        {%- endif %}
+        self.dataset_name = "{{ name }}"
+        self.feature_names = [{{ features|map(attribute='name')|quote_list|join(', ') }}]
+        self.target_name = "{{ target.name }}"
+        self.driftable_variables = {
+            {%- for feature in features if feature.has_drift %}
+            "{{ feature.name }}",
+            {%- endfor %}
+            {%- if target.has_drift %}
+            "{{ target.name }}"
+            {%- endif %}
+        }
+
+    def __iter__(self):
+        """
+        Generates and returns new data instances.
+
+        :returns: A generator of tuples of the format (X, y), where X is a list with feature
+                  instances and y is the target instance.
+        """
+        while True:
+            {%- for feature in features %}
+            {%- if feature.has_drift %}
+            {{ feature.name }} = self.{{ feature.name }}_function()
+            {%- else %}
+            {{ feature.name }} = {{ feature.formula }}
+            {%- endif %}
+            {%- endfor %}
+
+            {%- if target.has_drift %}
+            {{ target.name }} = self.{{ target.name }}_function({{ features|map(attribute='name')|join(', ') }})
+            {%- else %}
+            {%- if target.classtype == 'Binary' %}
+            if {{ target.formula }}:
+                {{ target.name }} = 1
+            else:
+                {{ target.name }} = 0
+            {%- else %}
+            {{ target.name }} = {{ target.formula }}
+            {%- endif %}
+            {%- endif %}
+            yield [{{ features|map(attribute='name')|join(', ') }}], {{ target.name }}
+
+    def get_n_instances(self, numinstances):
+        """
+        Generates and returns the number of data instances that is given as a parameter.
+
+        :param numinstances: The number of instances to be returned
+        :returns: A generator of tuples of the format (X, y), where is X is a list with feature
+                  instances and y is the target instance
+        """
+        return itertools.islice(self, numinstances)
+
+    {%- if has_drift %}
+    def data_drift(self, feature):
+        """
+        Generates a data drift by randomly choosing a data
+        generation function for the given variable.
+
+        :param feature: the feature on which the data drift is performed
+        """
+        self._drift(feature)
+
+    def concept_drift(self):
+        """
+        Generates a concept drift by randomly choosing a
+        generation function for the target variable.
+        """
+        self._drift("{{ target.name }}")
+
+    def _drift(self, variable):
+        {%- for feature in features if feature.has_drift %}
+        if variable == "{{ feature.name }}":
+            newfunc = self.{{ feature.name }}_function
+            while newfunc == self.{{ feature.name }}_function:
+                self.{{ feature.name }}_function = self._rng.choice([
+                    {%- for func in feature.drift_functions %}
+                    self.{{ func.name }},
+                    {%- endfor %}
+                ])
+        {%- endfor %}
+        {%- if target.has_drift %}
+        if variable == "{{ target.name }}":
+            newfunc = self.{{ target.name }}_function
+            while newfunc == self.{{ target.name }}_function:
+                self.{{ target.name }}_function = self._rng.choice([
+                    {%- for func in target.drift_functions %}
+                    self.{{ func.name }},
+                    {%- endfor %}
+                ])
+        {%- endif %}
+    {%- endif %}
+
+    {%- for feature in features if feature.has_drift %}
+    {%- for func in feature.drift_functions %}
+    def {{ func.name }}(self):
+        {{ feature.name }} = {{ func.formula }}
+        return {{ feature.name }}
+
+    {%- endfor %}
+    {%- endfor %}
+
+    {%- if target.has_drift %}
+    {%- for func in target.drift_functions %}
+    def {{ func.name }}(self, {{ features|map(attribute='name')|join(', ') }}):  # @UnusedVariable
+        {%- if target.classtype == 'Binary' %}
+        if {{ func.formula }}:
+            {{ target.name }} = 1
+        else:
+            {{ target.name }} = 0
+        {%- else %}
+        {{ target.name }} = {{ func.formula }}
+        {%- endif %}
+        return {{ target.name }}
+
+    {%- endfor %}
+    {%- endif %}
+
+{%- if run_config %}
+if __name__ == '__main__':
+    # Example of running this data generator
+    gen = {{ name }}({{ run_args_str }})
+    for i, (X, y) in enumerate(gen):
+        print("Index: {} - X: {} - y: {}".format(i, X, y))
+{%- endif %}

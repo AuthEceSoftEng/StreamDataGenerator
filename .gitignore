@@ -134,10 +134,10 @@ dmypy.json
 .pyre/
 
 # Test files
-sdg/examples/*.arff
-sdg/examples/*.csv
-sdg/examples/*.py
-sdg/examples/*.html
+examples/*.arff
+examples/*.csv
+examples/*.py
+examples/*.html
 
 # Local files
 notes.txt
