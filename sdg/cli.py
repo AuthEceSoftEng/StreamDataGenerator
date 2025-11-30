@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sdg.lang import parse_file
 from sdg.utils.model_converter import convert_model_to_dict
-from sdg.generator.codegenerator import generate, generate_run
+from sdg.utils.model_converter import convert_model_to_dict
 from sdg.tools.convert_yaml import convert_yaml_to_dsl
 
 def validate_command(args):
@@ -25,26 +25,11 @@ def generate_command(args):
         # Parse DSL
         model = parse_file(args.file)
         
-        # Convert to dictionary
-        dataset_dict = convert_model_to_dict(model)
-        
-        # Generate code
-        code = generate(dataset_dict)
-        run_code = generate_run(dataset_dict)
-        
-        # Determine output filename
-        if args.output:
-            output_file = args.output
-        else:
-            output_file = f"{dataset_dict['name'].lower()}.py"
+        # Generate code using the centralized generator function
+        from sdg.generator.codegenerator import sdg_generate
+        sdg_generate(None, model, args.output, overwrite=True, debug=False)
             
-        # Write to file
-        with open(output_file, 'w') as f:
-            f.write(code)
-            f.write("\n")
-            f.write(run_code)
-            
-        print(f"✅ Generated code in: {output_file}")
+        print(f"✅ Generated code from: {args.file}")
         
     except Exception as e:
         print(f"❌ Generation failed: {e}")

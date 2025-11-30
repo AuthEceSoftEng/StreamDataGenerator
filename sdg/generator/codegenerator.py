@@ -71,15 +71,9 @@ def generate(dataset_dict):
         "has_drift": any("drift" in f for f in dataset_dict["features"]) or "drift" in dataset_dict["target"]
     }
     
-    if "run" in dataset_dict:
+    if "run" in dataset_dict and "arguments" in dataset_dict["run"]:
         context["run_config"] = dataset_dict["run"]
         # Pre-format arguments for run config to avoid complex template logic
-        # But wait, the template expects run_config.arguments list of dicts.
-        # I'll handle the joining in the template or here.
-        # Let's handle it in template but simplify the template.
-        # Actually, let's just pass the list and let template iterate.
-        # The template uses zip, which is tricky.
-        # Let's pre-calculate the run string.
         run_args = []
         for arg in dataset_dict["run"]["arguments"]:
             run_args.append(f"{arg['name']}={arg['value']}")
@@ -114,7 +108,7 @@ def sdg_generate(metamodel, model, output_path, overwrite, debug, **custom_args)
     
     # Determine output path
     if not output_path:
-        output_path = f"{dataset_dict['name'].lower()}_generator.py"
+        output_path = f"{dataset_dict['name'].lower()}.py"
         
     # Write to file
     with open(output_path, 'w') as f:
