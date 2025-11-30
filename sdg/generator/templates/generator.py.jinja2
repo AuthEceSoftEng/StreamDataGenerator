@@ -153,10 +153,26 @@ class {{ name }}:
     {%- endfor %}
     {%- endif %}
 
+
 {%- if run_config %}
+
 if __name__ == '__main__':
-    # Example of running this data generator
-    gen = {{ name }}({{ run_args_str }})
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='{{ name }} - Stream Data Generator')
+    {% for arg in run_config.arguments -%}
+    parser.add_argument('--{{ arg.name }}', type=type({{ arg.value }}), default={{ arg.value }}, help='{{ parameters|selectattr("name", "equalto", arg.name)|map(attribute="description")|first|default("Parameter " ~ arg.name) }}')
+    {% endfor -%}
+    parser.add_argument('--samples', type=int, default=5, help='Number of samples to generate')
+    
+    args = parser.parse_args()
+    
+    # Initialize generator with parsed arguments
+    gen = {{ name }}({% for arg in run_config.arguments %}{{ arg.name }}=args.{{ arg.name }}{% if not loop.last %}, {% endif %}{% endfor %})
+    
+    # Generate and print samples
     for i, (X, y) in enumerate(gen):
-        print("Index: {} - X: {} - y: {}".format(i, X, y))
+        print(f"Instance {i}: X={X}, y={y}")
+        if i >= args.samples - 1:
+            break
 {%- endif %}
