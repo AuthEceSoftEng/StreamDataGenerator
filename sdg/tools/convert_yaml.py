@@ -18,6 +18,10 @@ def convert_yaml_to_dsl(yaml_file):
     if 'description' in data:
         desc = data['description'].replace('\n', '\\n').replace('"', '\\"')
         lines.append(f'    description: "{desc}"')
+        
+    if 'imports' in data:
+        imports_str = ', '.join(data['imports'])
+        lines.append(f'    imports {imports_str}')
     
     # Parameters
     if 'parameters' in data:

@@ -2,6 +2,7 @@ Dataset:
     'dataset' name=ID
         ('description:' description=STRING)?
         ('parameters' parameters*=Parameter 'end')?
+        ('imports' imports*=Import[','])?
         ('features' features*=Feature 'end')?
         'target' target=Target
         ('run' run_config=RunConfig)?
@@ -10,6 +11,10 @@ Dataset:
 
 Parameter:
     name=ID ':' description=STRING
+;
+
+Import:
+    name=ID
 ;
 
 Feature:

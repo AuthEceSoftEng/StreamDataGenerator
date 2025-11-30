@@ -21,6 +21,12 @@ def inspect_dataset(dsl_file):
         print(f"\n📝 Description:")
         print(f"   {model.description[:100]}...")
     
+    #Display imports
+    if model.imports:
+        print(f"\n📥 Imports:")
+        for imp in model.imports:
+            print(f"   - {imp}")
+            
     # Display parameters
     if model.parameters:
         print(f"\n⚙️  Parameters:")
