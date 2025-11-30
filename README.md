@@ -73,17 +73,17 @@ dataset Agrawal0DataGenerator
     end
     
     features
-        salary: UniformFloat(20000, 150000), "Salary"
-        age: UniformInteger(20, 80), "Age"
-        commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
+        float salary: UniformFloat(20000, 150000), "Salary"
+        int age: UniformInteger(20, 80), "Age"
+        float commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
     end
     
     target loanapproval:Binary
         description: "Loan Approval"
         formula: age < 40 or 60 <= age
         drift changeformula
-            value: age < 40 or 60 <= age
-            value: (age < 40 and salary >= 50000) or (age >= 60)
+            default: age < 40 or 60 <= age
+            alternative: (age < 40 and salary >= 50000) or (age >= 60)
         end
     end
     
