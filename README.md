@@ -110,13 +110,22 @@ end
 ```
 
 #### Features
-Define the input features (attributes) of the data stream. Each feature has a name, a generation formula, and a description.
+Define the input features (attributes) of the data stream.
+Syntax: `[Type] name: formula[, "Description"]`
+
 ```text
 features
-    age: UniformInteger(18, 90), "User Age"
-    income: Gaussian(50000, 10000), "Annual Income"
+    int age: UniformInteger(18, 90), "User Age"
+    List[string] tags: ["a", "b"], "Tags"
+    Dict[string, int] meta: {"id": 1}, "Metadata"
+    income: Gaussian(50000, 10000), "Annual Income (Implicit Type)"
 end
 ```
+
+#### Data Types
+Supported types for features:
+- **Primitive**: `int`, `float`, `string`, `bool`, `object`
+- **Composite**: `List[Type]`, `Dict[KeyType, ValueType]`
 
 #### Target
 Define the target variable (label) for supervised learning tasks. You must specify the type (`Binary`, `Float`, `Integer`, `Categorical`).
@@ -130,9 +139,9 @@ end
 #### Drift
 Define concept drift by specifying alternative formulas for a feature or target.
 ```text
-drift my_drift
-    value: original_formula
-    value: new_formula_after_drift
+drift changeformula
+    default: original_formula
+    alternative: new_formula_after_drift
 end
 ```
 

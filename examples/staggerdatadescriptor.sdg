@@ -4,16 +4,16 @@ dataset StaggerDataGenerator
         seed: "The seed of the random generator"
     end
     features
-        size: UniformCategorical("small", "medium", "large"), "The size of the object, one of small, medium, large"
-        shape: UniformCategorical("circle", "square", "triangle"), "The shape of the object, one of circle, square, triangle"
-        color: UniformCategorical("red", "blue", "green"), "The color of the object, one of red, blue, green"
+        string size: UniformCategorical("small", "medium", "large"), "The size of the object, one of small, medium, large"
+        string shape: UniformCategorical("circle", "square", "triangle"), "The shape of the object, one of circle, square, triangle"
+        string color: UniformCategorical("red", "blue", "green"), "The color of the object, one of red, blue, green"
     end
     target y:Binary
         description: "The target variable defined as a function of the features"
         formula: size == "small" and color == "red"
         drift changeformula
-            value: color == "green" or shape == "circle"
-            value: size == "medium" or size == "large"
+            green_or_circle: color == "green" or shape == "circle"
+            medium_or_large: size == "medium" or size == "large"
         end
     end
     run seed=42

@@ -50,6 +50,33 @@ def convert_formula(formulacode):
             
     return newformulacode
 
+def _get_type_string(type_obj):
+    """
+    Recursively convert textX type object to string representation.
+    """
+    if type_obj is None:
+        return None
+        
+    if isinstance(type_obj, str):
+        return type_obj
+        
+    # DictType
+    if hasattr(type_obj, 'key_type'):
+        k = _get_type_string(type_obj.key_type)
+        v = _get_type_string(type_obj.value_type)
+        if k and v:
+            return f"dict[{k}, {v}]"
+        return "dict"
+        
+    # ListType
+    if hasattr(type_obj, 'type'):
+        t = _get_type_string(type_obj.type)
+        if t:
+            return f"list[{t}]"
+        return "list"
+        
+    return str(type_obj)
+
 def convert_model_to_dict(model):
     """
     Convert a textX Dataset model into a dictionary compatible with the code generator.
@@ -77,7 +104,8 @@ def convert_model_to_dict(model):
             feat_dict = {
                 "name": feature.name,
                 "description": feature.description,
-                "formula": convert_formula(feature.formula)
+                "formula": convert_formula(feature.formula),
+                "type": _get_type_string(feature.type) if hasattr(feature, 'type') else None
             }
             
             if hasattr(feature, 'drift') and feature.drift:

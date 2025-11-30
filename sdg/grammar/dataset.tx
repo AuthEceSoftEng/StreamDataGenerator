@@ -13,8 +13,24 @@ Parameter:
 ;
 
 Feature:
-    name=ID ':' formula=Formula ',' description=STRING
+    (type=FeatureType)? name=ID ':' formula=Formula (',' description=STRING)?
     ('drift' drift=Drift)?
+;
+
+FeatureType:
+    PrimitiveType | ListType | DictType
+;
+
+PrimitiveType:
+    'int' | 'float' | 'string' | 'bool' | 'object'
+;
+
+ListType:
+    'List' ('[' type=FeatureType ']')?
+;
+
+DictType:
+    'Dict' ('[' key_type=FeatureType ',' value_type=FeatureType ']')?
 ;
 
 Target:
@@ -32,7 +48,7 @@ Drift:
 ;
 
 DriftFormula:
-    ('name:' name=ID)? 'value:' value=Formula
+    (type=FeatureType)? name=ID ':' value=Formula
 ;
 
 RunConfig:

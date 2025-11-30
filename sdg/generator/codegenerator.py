@@ -7,6 +7,7 @@ def prepare_feature_for_template(feature):
         "name": feature["name"],
         "description": feature["description"],
         "formula": feature["formula"],
+        "type": feature["type"],
         "has_drift": "drift" in feature
     }
     

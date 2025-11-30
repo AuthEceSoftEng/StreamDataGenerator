@@ -1,5 +1,6 @@
 import random
 import itertools
+import math
 
 class {{ name }}:
     """
@@ -55,7 +56,11 @@ class {{ name }}:
             {%- if feature.has_drift %}
             {{ feature.name }} = self.{{ feature.name }}_function()
             {%- else %}
+            {%- if feature.type %}
+            {{ feature.name }}: {{ feature.type }} = {{ feature.formula }}
+            {%- else %}
             {{ feature.name }} = {{ feature.formula }}
+            {%- endif %}
             {%- endif %}
             {%- endfor %}
 

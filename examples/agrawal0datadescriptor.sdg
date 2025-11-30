@@ -4,22 +4,22 @@ dataset Agrawal0DataGenerator
         seed: "The seed of the random generator"
     end
     features
-        salary: UniformFloat(20000, 150000), "Salary"
-        commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
-        age: UniformInteger(20, 80), "Age"
-        educationlevel: UniformInteger(0, 4), "Education Level"
-        car: UniformInteger(1, 20), "Car Maker"
-        zipcode: UniformInteger(0, 8), "Zip Code of the Town"
-        housevalue: UniformFloat(50000 * zipcode, 100000 * zipcode), "House Value"
-        houseyears: UniformInteger(1, 30), "Years House Owned"
-        loan: UniformFloat(0, 500000), "Total Loan Amount"
+        float salary: UniformFloat(20000, 150000), "Salary"
+        float commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
+        int age: UniformInteger(20, 80), "Age"
+        int educationlevel: UniformInteger(0, 4), "Education Level"
+        int car: UniformInteger(1, 20), "Car Maker"
+        int zipcode: UniformInteger(0, 8), "Zip Code of the Town"
+        float housevalue: UniformFloat(50000 * zipcode, 100000 * zipcode), "House Value"
+        int houseyears: UniformInteger(1, 30), "Years House Owned"
+        float loan: UniformFloat(0, 500000), "Total Loan Amount"
     end
     target loanapproval:Binary
         description: "Loan Approval (classification function 0 of the original paper is used)"
         formula: age < 40 or 60 <= age
         drift changeformula
-            value: age < 40 or 60 <= age
-            value: (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000)
+            default: age < 40 or 60 <= age
+            alternative: (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000)
         end
     end
     run seed=42
