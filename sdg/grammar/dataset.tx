@@ -18,19 +18,7 @@ Feature:
 ;
 
 FeatureType:
-    PrimitiveType | ListType | DictType
-;
-
-PrimitiveType:
     'int' | 'float' | 'string' | 'bool' | 'object'
-;
-
-ListType:
-    'List' ('[' type=FeatureType ']')?
-;
-
-DictType:
-    'Dict' ('[' key_type=FeatureType ',' value_type=FeatureType ']')?
 ;
 
 Target:

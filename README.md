@@ -18,6 +18,7 @@ This DSL provides a clean, structured, and type-safe way to define data streams,
       - [Dataset](#dataset)
       - [Parameters](#parameters)
       - [Features](#features)
+      - [Data Types](#data-types)
       - [Target](#target)
       - [Drift](#drift)
       - [Run Configuration](#run-configuration)
@@ -116,16 +117,18 @@ Syntax: `[Type] name: formula[, "Description"]`
 ```text
 features
     int age: UniformInteger(18, 90), "User Age"
-    List[string] tags: ["a", "b"], "Tags"
-    Dict[string, int] meta: {"id": 1}, "Metadata"
-    income: Gaussian(50000, 10000), "Annual Income (Implicit Type)"
+    float income: Gaussian(50000, 10000), "Annual Income"
+    string status: UniformCategorical("active", "inactive"), "Status"
 end
 ```
 
 #### Data Types
 Supported types for features:
-- **Primitive**: `int`, `float`, `string`, `bool`, `object`
-- **Composite**: `List[Type]`, `Dict[KeyType, ValueType]`
+- `int` - Integer values
+- `float` - Floating-point values
+- `string` - String values
+- `bool` - Boolean values
+- `object` - Generic object type
 
 #### Target
 Define the target variable (label) for supervised learning tasks. You must specify the type (`Binary`, `Float`, `Integer`, `Categorical`).
