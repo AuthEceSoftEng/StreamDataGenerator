@@ -51,6 +51,22 @@ def convert_command(args):
         print(f"❌ Conversion failed: {e}")
         sys.exit(1)
 
+def generate_docs_command(args):
+    """Generate markdown documentation from a DSL file."""
+    try:
+        # Parse DSL
+        model = parse_file(args.file)
+        
+        # Generate documentation using the documentation generator
+        from sdg.generator.docgenerator import sdg_generate_docs
+        output_path = sdg_generate_docs(None, model, args.output, overwrite=True, debug=False)
+            
+        print(f"✅ Generated documentation: {output_path}")
+        
+    except Exception as e:
+        print(f"❌ Documentation generation failed: {e}")
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(description="StreamDataGenerator DSL CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
@@ -64,6 +80,11 @@ def main():
     generate_parser.add_argument("file", help="Path to .sdg file")
     generate_parser.add_argument("-o", "--output", help="Output Python file path")
     
+    # Generate docs command
+    docs_parser = subparsers.add_parser("generate-docs", help="Generate markdown documentation from DSL")
+    docs_parser.add_argument("file", help="Path to .sdg file")
+    docs_parser.add_argument("-o", "--output", help="Output markdown file path")
+    
     # Convert command
     convert_parser = subparsers.add_parser("convert-yaml", help="Convert YAML descriptor to DSL")
     convert_parser.add_argument("file", help="Path to .yml file")
@@ -75,6 +96,8 @@ def main():
         validate_command(args)
     elif args.command == "generate":
         generate_command(args)
+    elif args.command == "generate-docs":
+        generate_docs_command(args)
     elif args.command == "convert-yaml":
         convert_command(args)
     else:

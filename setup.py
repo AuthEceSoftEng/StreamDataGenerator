@@ -20,10 +20,12 @@ setup(
         ],
         "textx_generators": [
             "sdg_gen = sdg.generator.codegenerator:sdg_gen_desc",
+            "sdg_docs = sdg.generator.docgenerator:sdg_docs_gen_desc",
         ],
     },
     include_package_data=True,
     package_data={
         "sdg.grammar": ["*.tx"],
+        "sdg.generator.templates": ["*.jinja2"],
     },
 )
