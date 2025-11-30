@@ -5,6 +5,10 @@ dataset LoanDatasetStreamGenerator
     end
     features
         float salary: UniformFloat(20000, 60000), "Salary"
+        drift changeformula
+            crisis: UniformFloat(10000, 40000)
+            growth: UniformFloat(30000, 80000)
+        end
         float commission: UniformFloat(0, 0.1 * salary), "Commission"
         int age: UniformInteger(20, 80), "Age"
         int educationlevel: UniformInteger(0, 4), "Education Level"
