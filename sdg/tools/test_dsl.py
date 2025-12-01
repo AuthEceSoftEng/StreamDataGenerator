@@ -7,6 +7,8 @@ def test_parser(dsl_file):
         model = parse_file(dsl_file)
         print(f"Successfully parsed {dsl_file}")
         print(f"Dataset Name: {model.name}")
+        if model.imports:
+            print(f"Imports: {', '.join(model.imports)}")
         if model.features:
             print(f"Features: {len(model.features)}")
             for f in model.features:

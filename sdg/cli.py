@@ -6,7 +6,6 @@ from pathlib import Path
 
 from sdg.lang import parse_file
 from sdg.utils.model_converter import convert_model_to_dict
-from sdg.utils.model_converter import convert_model_to_dict
 from sdg.tools.convert_yaml import convert_yaml_to_dsl
 
 def validate_command(args):

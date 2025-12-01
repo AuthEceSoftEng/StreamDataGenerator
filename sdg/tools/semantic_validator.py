@@ -27,6 +27,55 @@ class SemanticValidator:
         
         return True
     
+    def check_imports(self):
+        """Verify imports are valid and used."""
+        if not self.model.imports:
+            return
+        
+        # Check for duplicate imports
+        import_names = [imp.name for imp in self.model.imports]
+        seen = set()
+        for name in import_names:
+            if name in seen:
+                self.errors.append(f"Duplicate import: '{name}'")
+            seen.add(name)
+        
+        # Check if imported modules are used in formulas
+        all_formulas = self._collect_all_formulas()
+        used_imports = set()
+        
+        for imp in self.model.imports:
+            for formula in all_formulas:
+                if imp.name in formula:
+                    used_imports.add(imp.name)
+                    break
+        
+        unused = set(import_names) - used_imports
+        if unused:
+            print(f"Warning: Unused imports: {unused}")
+    
+    def _collect_all_formulas(self):
+        """Collect all formulas from features and target."""
+        formulas = []
+        
+        if self.model.features:
+            for feature in self.model.features:
+                if feature.formula:
+                    formulas.append(feature.formula)
+                if hasattr(feature, 'drift') and feature.drift:
+                    for df in feature.drift.formulas:
+                        if df.value:
+                            formulas.append(df.value)
+        
+        if self.model.target and self.model.target.formula:
+            formulas.append(self.model.target.formula)
+            if hasattr(self.model.target, 'drift') and self.model.target.drift:
+                for df in self.model.target.drift.formulas:
+                    if df.value:
+                        formulas.append(df.value)
+        
+        return formulas
+    
     def check_variable_scoping(self):
         """Verify that formulas only reference variables in scope."""
         # Build parameter set
@@ -139,6 +188,10 @@ class SemanticValidator:
             'if', 'else', 'and', 'or', 'not', 'in', 'is', 'True', 'False', 'None',
             'math', 'sin', 'cos', 'tan', 'pi', 'e', 'sqrt', 'exp', 'log'
         }
+        
+        # Add imported module names to excluded set
+        if self.model.imports:
+            excluded.update(imp.name for imp in self.model.imports)
         
         # Match identifiers (alphanumeric + underscore, starting with letter or underscore)
         identifiers = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', formula_no_strings)

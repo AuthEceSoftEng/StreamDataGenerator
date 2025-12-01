@@ -3,6 +3,7 @@ dataset FriedmanDataGenerator
     parameters
         seed: "The seed of the random generator"
     end
+    imports math
     features
         float x1: UniformFloat(0, 1), "The first variable"
         float x2: UniformFloat(0, 1), "The second variable"
