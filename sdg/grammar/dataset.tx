@@ -2,9 +2,9 @@ Dataset:
     'dataset' name=ID
         ('description:' description=STRING)?
         ('parameters' parameters*=Parameter 'end')?
-        ('imports' imports*=Import[','])?
         ('features' features*=Feature 'end')?
         'target' target=Target
+        ('drifts' drifts*=Drift 'end')?
         ('run' run_config=RunConfig)?
     'end'
 ;
@@ -13,13 +13,8 @@ Parameter:
     name=ID ':' description=STRING
 ;
 
-Import:
-    name=ID
-;
-
 Feature:
     (type=FeatureType)? name=ID ':' formula=Formula (',' description=STRING)?
-    ('drift' drift=Drift)?
 ;
 
 FeatureType:
@@ -30,18 +25,24 @@ Target:
     name=ID ':' type=ID
         'description:' description=STRING
         'formula:' formula=Formula
-        ('drift' drift=Drift)?
     'end'
 ;
 
 Drift:
-    type=ID
-        formulas*=DriftFormula
+    'drift' 'on' variable=ID 
+        'formula:' formula=Formula
+        'points' drift_points*=DriftPoint 'end'
     'end'
 ;
 
-DriftFormula:
-    (type=FeatureType)? name=ID ':' value=Formula
+DriftPoint:
+    trigger=INT ':' type=DriftType
+        ('duration:' duration=INT)?
+        ('transition:' transition_steps=INT)?
+;
+
+DriftType: 
+    'sudden' | 'gradual' | 'incremental' | 'recurring'
 ;
 
 RunConfig:

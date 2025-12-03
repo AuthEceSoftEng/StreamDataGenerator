@@ -26,133 +26,135 @@ class {{ name }}:
         self.{{ param.name }} = {{ param.name }}
         {%- endfor %}
         self._rng = random.Random(self.seed)
-        {%- for feature in features if feature.has_drift %}
-        self.{{ feature.name }}_function = self._{{ feature.name }}_function_0
+        self._instance_count = 0
+
+        {%- if has_drift %}
+        # Drift configurations by variable
+        self._drift_configs = {
+        {%- for drift in drifts %}
+            "{{ drift.variable }}": {{ drift.drifts | tojson }},
         {%- endfor %}
-        {%- if target.has_drift %}
-        self.{{ target.name }}_function = self._{{ target.name }}_function_0
+        }
+
+        # Drift runtime state per variable
+        self._drift_state = {
+        {%- for drift in drifts %}
+            "{{ drift.variable }}": {
+                "active_drift_idx": None,
+                "transition_progress": 0
+            },
+        {%- endfor %}
+        }
         {%- endif %}
+
         self.dataset_name = "{{ name }}"
         self.feature_names = [{{ features|map(attribute='name')|quote_list|join(', ') }}]
         self.target_name = "{{ target.name }}"
-        self.driftable_variables = {
-            {%- for feature in features if feature.has_drift %}
-            "{{ feature.name }}",
-            {%- endfor %}
-            {%- if target.has_drift %}
-            "{{ target.name }}"
-            {%- endif %}
-        }
+
+    {%- if has_drift %}
+    def _check_and_update_drifts(self):
+        """Trigger start/end of drifts based on instance counter."""
+        for var_name, drifts in self._drift_configs.items():
+            state = self._drift_state[var_name]
+
+            # Check all drifts in order; later drifts can override earlier ones
+            for idx, cfg in enumerate(drifts):
+                trigger = cfg.get("trigger_point") or 0
+                duration = cfg.get("duration")
+                
+                # Check if this drift should start
+                if self._instance_count == trigger:
+                    state["active_drift_idx"] = idx
+                    state["transition_progress"] = 0
+                
+                # Check if recurring drift should end (revert to previous state)
+                if (state["active_drift_idx"] == idx and 
+                    duration is not None and
+                    self._instance_count >= trigger + duration):
+                    # Find the most recent drift that should still be active
+                    state["active_drift_idx"] = None
+                    for prev_idx in range(idx - 1, -1, -1):
+                        prev_cfg = drifts[prev_idx]
+                        prev_trigger = prev_cfg.get("trigger_point") or 0
+                        prev_duration = prev_cfg.get("duration")
+                        # Check if previous drift is still active
+                        if prev_trigger <= self._instance_count:
+                            if prev_duration is None or self._instance_count < prev_trigger + prev_duration:
+                                state["active_drift_idx"] = prev_idx
+                                state["transition_progress"] = 0
+                                break
+
+    def _current_formula(self, var_name, original_formula):
+        """
+        Resolve current formula considering active drift type.
+        - sudden: immediately switch to new_formula
+        - gradual: switch after transition_steps
+        - incremental: same as sudden (custom interpolation left to generator logic if needed)
+        - recurring: same as sudden, but ends after duration
+        """
+        state = self._drift_state.get(var_name)
+        if not state or state["active_drift_idx"] is None:
+            return original_formula
+
+        cfg = self._drift_configs[var_name][state["active_drift_idx"]]
+        drift_type = cfg.get("type")
+        new_formula = cfg.get("formula")
+
+        if drift_type in ("sudden", "recurring", "incremental"):
+            return new_formula
+
+        if drift_type == "gradual":
+            steps = max(1, int(cfg.get("transition_steps") or 1))
+            progress = min(state["transition_progress"] / steps, 1.0)
+            state["transition_progress"] += 1
+            return new_formula if progress >= 1.0 else original_formula
+
+        return original_formula
+    {%- endif %}
 
     def __iter__(self):
         """
         Generates and returns new data instances.
 
-        :returns: A generator of tuples of the format (X, y), where X is a list with feature
-                  instances and y is the target instance.
+        :returns: A generator of tuples (X, y): X is feature list, y is target.
         """
         while True:
+            {%- if has_drift %}
+            self._check_and_update_drifts()
+            {%- endif %}
+
             {%- for feature in features %}
-            {%- if feature.has_drift %}
-            {{ feature.name }} = self.{{ feature.name }}_function()
-            {%- else %}
-            {%- if feature.type %}
-            {{ feature.name }}: {{ feature.type }} = {{ feature.formula }}
+            {%- if has_drift %}
+            _{{ feature.name }}_expr = self._current_formula("{{ feature.name }}", "{{ feature.formula }}")
+            {{ feature.name }} = eval(_{{ feature.name }}_expr)
             {%- else %}
             {{ feature.name }} = {{ feature.formula }}
             {%- endif %}
-            {%- endif %}
             {%- endfor %}
 
-            {%- if target.has_drift %}
-            {{ target.name }} = self.{{ target.name }}_function({{ features|map(attribute='name')|join(', ') }})
+            {%- if has_drift %}
+            _{{ target.name }}_expr = self._current_formula("{{ target.name }}", "{{ target.formula }}")
+            {%- if target.classtype == 'Binary' %}
+            {{ target.name }} = 1 if eval(_{{ target.name }}_expr) else 0
+            {%- else %}
+            {{ target.name }} = eval(_{{ target.name }}_expr)
+            {%- endif %}
             {%- else %}
             {%- if target.classtype == 'Binary' %}
-            if {{ target.formula }}:
-                {{ target.name }} = 1
-            else:
-                {{ target.name }} = 0
+            {{ target.name }} = 1 if ({{ target.formula }}) else 0
             {%- else %}
             {{ target.name }} = {{ target.formula }}
             {%- endif %}
             {%- endif %}
+
+            self._instance_count += 1
             yield [{{ features|map(attribute='name')|join(', ') }}], {{ target.name }}
 
     def get_n_instances(self, numinstances):
         """
         Generates and returns the number of data instances that is given as a parameter.
-
-        :param numinstances: The number of instances to be returned
-        :returns: A generator of tuples of the format (X, y), where is X is a list with feature
-                  instances and y is the target instance
         """
         return itertools.islice(self, numinstances)
-
-    {%- if has_drift %}
-    def data_drift(self, feature):
-        """
-        Generates a data drift by randomly choosing a data
-        generation function for the given variable.
-
-        :param feature: the feature on which the data drift is performed
-        """
-        self._drift(feature)
-
-    def concept_drift(self):
-        """
-        Generates a concept drift by randomly choosing a
-        generation function for the target variable.
-        """
-        self._drift("{{ target.name }}")
-
-    def _drift(self, variable):
-        {%- for feature in features if feature.has_drift %}
-        if variable == "{{ feature.name }}":
-            newfunc = self.{{ feature.name }}_function
-            while newfunc == self.{{ feature.name }}_function:
-                self.{{ feature.name }}_function = self._rng.choice([
-                    {%- for func in feature.drift_functions %}
-                    self.{{ func.name }},
-                    {%- endfor %}
-                ])
-        {%- endfor %}
-        {%- if target.has_drift %}
-        if variable == "{{ target.name }}":
-            newfunc = self.{{ target.name }}_function
-            while newfunc == self.{{ target.name }}_function:
-                self.{{ target.name }}_function = self._rng.choice([
-                    {%- for func in target.drift_functions %}
-                    self.{{ func.name }},
-                    {%- endfor %}
-                ])
-        {%- endif %}
-    {%- endif %}
-
-    {%- for feature in features if feature.has_drift %}
-    {%- for func in feature.drift_functions %}
-    def {{ func.name }}(self):
-        {{ feature.name }} = {{ func.formula }}
-        return {{ feature.name }}
-
-    {%- endfor %}
-    {%- endfor %}
-
-    {%- if target.has_drift %}
-    {%- for func in target.drift_functions %}
-    def {{ func.name }}(self, {{ features|map(attribute='name')|join(', ') }}):  # @UnusedVariable
-        {%- if target.classtype == 'Binary' %}
-        if {{ func.formula }}:
-            {{ target.name }} = 1
-        else:
-            {{ target.name }} = 0
-        {%- else %}
-        {{ target.name }} = {{ func.formula }}
-        {%- endif %}
-        return {{ target.name }}
-
-    {%- endfor %}
-    {%- endif %}
-
 
 {%- if run_config %}
 

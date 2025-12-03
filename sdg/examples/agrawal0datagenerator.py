@@ -47,15 +47,15 @@ class Agrawal0DataGenerator:
         """
         while True:
 
-            salary = self._rng.uniform((20000, 150000))
-            commission = 0 if salary < 75000 else self._rng.uniform((10000, 75000))
+            salary = self._rng.uniform(20000, 150000)
+            commission = 0 if salary < 75000 else self._rng.uniform(10000, 75000)
             age = self._rng.randint(20, 80)
             educationlevel = self._rng.randint(0, 4)
             car = self._rng.randint(1, 20)
             zipcode = self._rng.randint(0, 8)
-            housevalue = self._rng.uniform((50000 * zipcode, 100000 * zipcode))
+            housevalue = self._rng.uniform(50000 * zipcode, 100000 * zipcode)
             houseyears = self._rng.randint(1, 30)
-            loan = self._rng.uniform((0, 500000))
+            loan = self._rng.uniform(0, 500000)
 
             loanapproval = self.loanapproval_function(salary, commission, age, educationlevel, car, zipcode, housevalue, houseyears, loan)
             yield [salary, commission, age, educationlevel, car, zipcode, housevalue, houseyears, loan], loanapproval
