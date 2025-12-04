@@ -72,15 +72,25 @@ def convert_model_to_dict(model):
         "parameters": [],
         "features": [],
         "target": {},
-        "run": {}
+        "run": {}  # Run config is removed from grammar but kept in dict for compatibility if needed
     }
     
+    # Group drifts by target_name
+    drifts_by_target = {}
+    if hasattr(model, 'drifts'):
+        for drift in model.drifts:
+            if drift.target_name not in drifts_by_target:
+                drifts_by_target[drift.target_name] = []
+            drifts_by_target[drift.target_name].append(drift)
+
     # Parameters
     if hasattr(model, 'parameters') and model.parameters:
         for param in model.parameters:
             result["parameters"].append({
                 "name": param.name,
-                "description": param.description
+                "description": param.description,
+                "type": _get_type_string(param.type),
+                "default": param.default
             })
             
     # Features
@@ -90,18 +100,18 @@ def convert_model_to_dict(model):
                 "name": feature.name,
                 "description": feature.description,
                 "formula": convert_formula(feature.formula),
-                "type": _get_type_string(feature.type) if hasattr(feature, 'type') else None
+                "type": _get_type_string(feature.type)
             }
             
-            if hasattr(feature, 'drift') and feature.drift:
+            # Attach drifts
+            if feature.name in drifts_by_target:
                 drift_formulas = []
-                for df in feature.drift.formulas:
+                for drift in drifts_by_target[feature.name]:
                     drift_formulas.append({
-                        "name": df.name if hasattr(df, 'name') else None,
-                        "value": convert_formula(df.value)
+                        "name": drift.name,
+                        "value": convert_formula(drift.formula)
                     })
                 feat_dict["drift"] = {
-                    "type": feature.drift.type,
                     "formulas": drift_formulas
                 }
             
@@ -113,32 +123,22 @@ def convert_model_to_dict(model):
         target_dict = {
             "name": target.name,
             "description": target.description,
-            "classtype": target.type,
+            "classtype": _get_type_string(target.type),
             "formula": convert_formula(target.formula)
         }
         
-        if hasattr(target, 'drift') and target.drift:
+        # Attach drifts
+        if target.name in drifts_by_target:
             drift_formulas = []
-            for df in target.drift.formulas:
+            for drift in drifts_by_target[target.name]:
                 drift_formulas.append({
-                    "name": df.name if hasattr(df, 'name') else None,
-                    "value": convert_formula(df.value)
+                    "name": drift.name,
+                    "value": convert_formula(drift.formula)
                 })
             target_dict["drift"] = {
-                "type": target.drift.type,
                 "formulas": drift_formulas
             }
             
         result["target"] = target_dict
-        
-    # Run config
-    if hasattr(model, 'run_config') and model.run_config:
-        args = []
-        for arg in model.run_config.arguments:
-            args.append({
-                "name": arg.name,
-                "value": arg.value
-            })
-        result["run"] = {"arguments": args}
         
     return result

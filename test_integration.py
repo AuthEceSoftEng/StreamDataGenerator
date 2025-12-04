@@ -64,11 +64,13 @@ def test_example(sdg_file):
             generator_class = getattr(module, model.name)
             
             # Step 4: Validate dataset generation
-            # Get parameters from run config
+            # Get parameters from model parameters
             params = {}
-            if hasattr(model, 'run_config') and model.run_config:
-                for arg in model.run_config.arguments:
-                    params[arg.name] = arg.value
+            if hasattr(model, 'parameters') and model.parameters:
+                for param in model.parameters:
+                    # Use default value if available
+                    if hasattr(param, 'default'):
+                        params[param.name] = param.default
             
             # Instantiate generator
             if params:

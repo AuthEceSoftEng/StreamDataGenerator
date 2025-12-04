@@ -1,50 +1,34 @@
 Dataset:
-    'dataset' name=ID
-        ('description:' description=STRING)?
-        ('parameters' parameters*=Parameter 'end')?
-        ('features' features*=Feature 'end')?
-        'target' target=Target
-        ('run' run_config=RunConfig)?
-    'end'
+    'DATASET' name=ID ';'
+    ('DESC' description=STRING ';')?
+    (parameters+=Parameter)?
+    (features+=Feature)?
+    target=Target
+    (drifts+=Drift)*
 ;
 
 Parameter:
-    name=ID ':' description=STRING
+    'PARAM' name=ID ':' type=FeatureType ',' description=STRING ',' default=Value ';'
 ;
 
 Feature:
-    (type=FeatureType)? name=ID ':' formula=Formula (',' description=STRING)?
-    ('drift' drift=Drift)?
-;
-
-FeatureType:
-    'int' | 'float' | 'string' | 'bool' | 'object'
+    'FEATURE' name=ID ':' type=FeatureType ',' description=STRING 'WITH' formula=Formula ';'
 ;
 
 Target:
-    name=ID ':' type=ID
-        'description:' description=STRING
-        'formula:' formula=Formula
-        ('drift' drift=Drift)?
-    'end'
+    'TARGET' name=ID ':' type=TargetType ',' description=STRING 'WITH' formula=Formula ';'
 ;
 
 Drift:
-    type=ID
-        formulas*=DriftFormula
-    'end'
+    'DRIFT' name=ID ':' type=ID 'ON' target_name=ID 'WITH' formula=Formula ';'
 ;
 
-DriftFormula:
-    (type=FeatureType)? name=ID ':' value=Formula
+FeatureType:
+    'int' | 'float' | 'string' | 'bool'
 ;
 
-RunConfig:
-    arguments+=Argument[',']
-;
-
-Argument:
-    name=ID '=' value=Value
+TargetType:
+    'binary' | 'scalar'
 ;
 
 Value:
@@ -52,7 +36,6 @@ Value:
 ;
 
 Formula:
-    // Match until a comma followed by a quote AND end of line (for features)
-    // OR match everything until newline (for target/others)
-    /(.+?(?=,\s*"[^"]*"\s*(\r?\n|$)))|([^\n]+)/
+    // Match everything until a semicolon
+    /[^;]+/
 ;

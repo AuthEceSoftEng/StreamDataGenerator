@@ -27,28 +27,36 @@ def generate_documentation(dataset_dict, model=None):
     
     # If model is provided, extract original formulas
     if model:
+        # Map drifts by target name for easier access
+        drifts_by_target = {}
+        if hasattr(model, 'drifts'):
+            for drift in model.drifts:
+                if drift.target_name not in drifts_by_target:
+                    drifts_by_target[drift.target_name] = []
+                drifts_by_target[drift.target_name].append(drift)
+
         # Extract original formulas from model
         for i, feature in enumerate(dataset_dict.get('features', [])):
             if i < len(model.features):
                 feature['original_formula'] = str(model.features[i].formula).strip()
+                
+                # Extract drift formulas for features
+                if 'drift' in feature and feature['name'] in drifts_by_target:
+                    model_drifts = drifts_by_target[feature['name']]
+                    for j, df in enumerate(feature['drift']['formulas']):
+                        if j < len(model_drifts):
+                            df['original_value'] = str(model_drifts[j].formula).strip()
         
         # Extract target formula
         if 'target' in dataset_dict and model.target:
             dataset_dict['target']['original_formula'] = str(model.target.formula).strip()
             
             # Extract drift formulas for target
-            if 'drift' in dataset_dict['target'] and hasattr(model.target, 'drift') and model.target.drift:
-                for i, df in enumerate(dataset_dict['target']['drift']['formulas']):
-                    if i < len(model.target.drift.formulas):
-                        df['original_value'] = str(model.target.drift.formulas[i].value).strip()
-        
-        # Extract drift formulas for features
-        for i, feature in enumerate(dataset_dict.get('features', [])):
-            if 'drift' in feature and i < len(model.features):
-                if hasattr(model.features[i], 'drift') and model.features[i].drift:
-                    for j, df in enumerate(feature['drift']['formulas']):
-                        if j < len(model.features[i].drift.formulas):
-                            df['original_value'] = str(model.features[i].drift.formulas[j].value).strip()
+            if 'drift' in dataset_dict['target'] and model.target.name in drifts_by_target:
+                model_drifts = drifts_by_target[model.target.name]
+                for j, df in enumerate(dataset_dict['target']['drift']['formulas']):
+                    if j < len(model_drifts):
+                        df['original_value'] = str(model_drifts[j].formula).strip()
     
     # Prepare context
     context = {
@@ -57,7 +65,7 @@ def generate_documentation(dataset_dict, model=None):
         'parameters': dataset_dict.get('parameters', []),
         'features': dataset_dict.get('features', []),
         'target': dataset_dict.get('target', {}),
-        'run_config': dataset_dict.get('run', {})
+        # run_config removed, use parameters for documentation if needed
     }
     
     # Check for drift

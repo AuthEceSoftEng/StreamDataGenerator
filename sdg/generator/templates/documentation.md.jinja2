@@ -161,14 +161,14 @@ gen.concept_drift()
 
 ## 📝 Configuration
 
-{% if run_config and 'arguments' in run_config %}
-### Default Run Configuration
+{% if parameters %}
+### Default Configuration
 
 ```python
-{{ name }}({% for arg in run_config.arguments %}{{ arg.name }}={{ arg.value }}{% if not loop.last %}, {% endif %}{% endfor %})
+{{ name }}({% for param in parameters %}{{ param.name }}={{ param.default }}{% if not loop.last %}, {% endif %}{% endfor %})
 ```
 {% else %}
-*No default configuration specified.*
+*No configuration parameters.*
 {% endif %}
 
 ---

@@ -1,20 +1,9 @@
-dataset StaggerDataGenerator
-    description: "Stream generator producing three boolean features describing objects:\n size, shape and colour. Dataset originally introduced in:\n Schlimmer, J. C., & Granger, R. H. (1986). Incremental learning from.\n noisy data. Machine learning, 1(3), 317-354."
-    parameters
-        seed: "The seed of the random generator"
-    end
-    features
-        string size: UniformCategorical("small", "medium", "large"), "The size of the object, one of small, medium, large"
-        string shape: UniformCategorical("circle", "square", "triangle"), "The shape of the object, one of circle, square, triangle"
-        string color: UniformCategorical("red", "blue", "green"), "The color of the object, one of red, blue, green"
-    end
-    target y:Binary
-        description: "The target variable defined as a function of the features"
-        formula: size == "small" and color == "red"
-        drift changeformula
-            green_or_circle: color == "green" or shape == "circle"
-            medium_or_large: size == "medium" or size == "large"
-        end
-    end
-    run seed=42
-end
+DATASET StaggerDataGenerator;
+DESC "Stream generator producing three boolean features describing objects:\n size, shape and colour. Dataset originally introduced in:\n Schlimmer, J. C., & Granger, R. H. (1986). Incremental learning from.\n noisy data. Machine learning, 1(3), 317-354.";
+PARAM seed:int, "The seed of the random generator", 42;
+FEATURE size:string, "The size of the object, one of small, medium, large" WITH UniformCategorical("small", "medium", "large");
+FEATURE shape:string, "The shape of the object, one of circle, square, triangle" WITH UniformCategorical("circle", "square", "triangle");
+FEATURE color:string, "The color of the object, one of red, blue, green" WITH UniformCategorical("red", "blue", "green");
+TARGET y:binary, "The target variable defined as a function of the features" WITH size == "small" and color == "red";
+DRIFT green_or_circle:changeformula ON y WITH color == "green" or shape == "circle";
+DRIFT medium_or_large:changeformula ON y WITH size == "medium" or size == "large";

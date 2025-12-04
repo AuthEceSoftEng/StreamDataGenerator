@@ -14,7 +14,7 @@ class {{ name }}:
     Target:
     - {{ target.name }}: {{ target.description }}
     """
-    def __init__(self, {{ parameters|join(', ', attribute='name') }}):
+    def __init__(self{% for param in parameters %}, {{ param.name }}={{ param.default }}{% endfor %}):
         """
         Initializes this random data generator
 
@@ -67,7 +67,7 @@ class {{ name }}:
             {%- if target.has_drift %}
             {{ target.name }} = self.{{ target.name }}_function({{ features|map(attribute='name')|join(', ') }})
             {%- else %}
-            {%- if target.classtype == 'Binary' %}
+            {%- if target.classtype == 'binary' %}
             if {{ target.formula }}:
                 {{ target.name }} = 1
             else:
@@ -140,7 +140,7 @@ class {{ name }}:
     {%- if target.has_drift %}
     {%- for func in target.drift_functions %}
     def {{ func.name }}(self, {{ features|map(attribute='name')|join(', ') }}):  # @UnusedVariable
-        {%- if target.classtype == 'Binary' %}
+        {%- if target.classtype == 'binary' %}
         if {{ func.formula }}:
             {{ target.name }} = 1
         else:
@@ -154,25 +154,22 @@ class {{ name }}:
     {%- endif %}
 
 
-{%- if run_config %}
-
 if __name__ == '__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description='{{ name }} - Stream Data Generator')
-    {% for arg in run_config.arguments -%}
-    parser.add_argument('--{{ arg.name }}', type=type({{ arg.value }}), default={{ arg.value }}, help='{{ parameters|selectattr("name", "equalto", arg.name)|map(attribute="description")|first|default("Parameter " ~ arg.name) }}')
+    {% for param in parameters -%}
+    parser.add_argument('--{{ param.name }}', type={{ param.type }}, default={{ param.default }}, help='{{ param.description }}')
     {% endfor -%}
     parser.add_argument('--samples', type=int, default=5, help='Number of samples to generate')
     
     args = parser.parse_args()
     
     # Initialize generator with parsed arguments
-    gen = {{ name }}({% for arg in run_config.arguments %}{{ arg.name }}=args.{{ arg.name }}{% if not loop.last %}, {% endif %}{% endfor %})
+    gen = {{ name }}({% for param in parameters %}{{ param.name }}=args.{{ param.name }}{% if not loop.last %}, {% endif %}{% endfor %})
     
     # Generate and print samples
     for i, (X, y) in enumerate(gen):
         print(f"Instance {i}: X={X}, y={y}")
         if i >= args.samples - 1:
             break
-{%- endif %}
