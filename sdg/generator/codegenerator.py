@@ -106,6 +106,17 @@ def sdg_generate(metamodel, model, output_path, overwrite, debug, **custom_args)
     # Write to file
     with open(output_path, 'w') as f:
         f.write(code)
+    
+    # Format with ruff
+    try:
+        import subprocess
+        # Run ruff format to auto-format the generated code
+        subprocess.run(['ruff', 'format', output_path], check=False, capture_output=True)
+        # Run ruff check with --fix to auto-fix linting issues
+        subprocess.run(['ruff', 'check', '--fix', output_path], check=False, capture_output=True)
+    except Exception:
+        # If ruff is not available, continue without formatting
+        pass
 
 from textx import GeneratorDesc
 

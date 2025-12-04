@@ -1,6 +1,17 @@
 import random
 import itertools
+{%- set uses_math = namespace(value=false) %}
+{%- for feature in features %}
+{%- if 'math.' in feature.formula %}
+{%- set uses_math.value = true %}
+{%- endif %}
+{%- endfor %}
+{%- if 'math.' in target.formula %}
+{%- set uses_math.value = true %}
+{%- endif %}
+{%- if uses_math.value %}
 import math
+{%- endif %}
 
 class {{ name }}:
     """
