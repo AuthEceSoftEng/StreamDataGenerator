@@ -75,17 +75,23 @@ def _get_type_string(type_obj):
     return str(type_obj)
 
 
+def _decode_escapes(text):
+    """Decode escape sequences in strings."""
+    if not text:
+        return ""
+    try:
+        return codecs.decode(text, 'unicode_escape')
+    except Exception:
+        return text
+
+
 def convert_model_to_dict(model):
     """
     Convert a textX Dataset model into a dictionary compatible with the code generator.
     """
-     # Decode escape sequences in description
-    raw_description = getattr(model, 'description', "")
-    description = codecs.decode(raw_description, 'unicode_escape') if raw_description else ""
-    
     result = {
         "name": model.name,
-        "description": description,
+        "description": _decode_escapes(getattr(model, 'description', "")),
         "parameters": [],
         "features": [],
         "target": {},
@@ -97,40 +103,77 @@ def convert_model_to_dict(model):
     for param in getattr(model, 'parameters', []):
         result["parameters"].append({
             "name": param.name,
-            "description": codecs.decode(getattr(param, 'description', ""), 'unicode_escape')
+            "description": _decode_escapes(getattr(param, 'description', ""))
         })
 
     # Features
     for feature in getattr(model, 'features', []):
-        feat_dict = {
+        default_formula = convert_formula(getattr(feature, 'formula', ""))
+
+        scenarios = {}
+        for scenario in getattr(feature, 'scenarios', []):
+            scenario_name = getattr(scenario, 'name', "")
+            scenario_formula = convert_formula(
+                getattr(scenario, 'formula', ""))
+            scenarios[scenario_name] = scenario_formula
+
+        result["features"].append({
             "name": feature.name,
-            "description": codecs.decode(getattr(feature, 'description', ""), 'unicode_escape'),
-            "formula": convert_formula(feature.formula),
+            "description": _decode_escapes(getattr(feature, 'description', "")),
+            "default_formula": default_formula,
+            "scenarios": scenarios,
             "type": _get_type_string(getattr(feature, 'type', None))
-        }
-        result["features"].append(feat_dict)
+        })
 
     # Target
     target = getattr(model, 'target', None)
     if target:
-        result["target"] = {
-            "name": target.name,
-            "description": codecs.decode(getattr(target, 'description', ""), 'unicode_escape'),
-            "classtype": target.type,
-            "formula": convert_formula(target.formula)
-        }
+        default_formula = convert_formula(getattr(target, 'formula', ""))
+
+        scenarios = {}
+        for scenario in getattr(target, 'scenarios', []):
+            scenario_name = getattr(scenario, 'name', "")
+            scenario_code = convert_formula((scenario, 'formula', ""))
+            scenarios[scenario_name] = scenario_code
+            
+            result["target"] = {
+                "name": target.name,
+                "description": _decode_escapes(getattr(target, 'description', "")),
+                "classtype": getattr(target, 'type', ""),
+                "formula": default_formula,
+                "scenarios": scenarios
+            }
+
+    # Build lookup map for named formulas
+    variable_formulas = {}
+    for feature in result["features"]:
+        variable_formulas[feature["name"]] = feature["scenarios"]
+    variable_formulas[result["target"]["name"]] = result["target"]["scenarios"]
 
     # Drifts
     for drift in getattr(model, 'drifts', []):
-        drift_points = getattr(drift, "drift_points", [])
-        for point in drift_points:
+        drift_variable = getattr(drift, 'variable', "")
+        feature_scenarios = variable_formulas.get(drift_variable, {})
+        
+        for point in getattr(drift, 'drift_points', []):
+            trigger = getattr(point, 'trigger', 0)
+            drift_type = getattr(point, 'drift_type', 'sudden')
+            scenario_name = getattr(point, 'scenario_name', None)
+            duration = getattr(point, 'duration', None)
+            interval = getattr(point, 'interval', None)
+            transition = getattr(point, 'transition_steps', None)
+            
+            drift_formula = feature_scenarios.get(scenario_name, "")
+            
             drift_dict = {
-                "variable": drift.variable,
-                "type": point.type,
-                "formula": convert_formula(drift.formula),
-                "trigger_point": point.trigger,
-                "duration": getattr(point, "duration", None),
-                "transition_steps": getattr(point, "transition_steps", None)
+                "variable": drift_variable,
+                "type": drift_type,
+                "trigger_point": trigger,
+                "duration": duration,
+                "interval": interval,
+                "transition_steps": transition,
+                "formula": drift_formula,
+                "scenario_name": scenario_name
             }
             result["drifts"].append(drift_dict)
 

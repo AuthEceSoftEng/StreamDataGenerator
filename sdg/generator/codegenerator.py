@@ -72,9 +72,14 @@ def prepare_drifts_for_template(drifts):
             "formula": drift["formula"],
             "trigger_point": drift["trigger_point"] or 0,
             "duration": drift["duration"],
+            "interval": drift["interval"],
             "transition_steps": drift["transition_steps"]
         })
-
+        
+    # Sorting drifts by trigger point within each variable
+    for var_name in drift_map:
+        drift_map[var_name].sort(key=lambda d: d["trigger_point"])
+        
     # Return list of drift specifications
     drift_specs = []
     for var_name, drifts_list in drift_map.items():

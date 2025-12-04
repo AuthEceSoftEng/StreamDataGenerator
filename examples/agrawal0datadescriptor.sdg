@@ -19,6 +19,9 @@ dataset Agrawal0DataGenerator
         formula: age < 40 or 60 <= age
     end
     drifts
+        formulas
+            growth
+            crisis:
         drift on loanapproval
             type: sudden
             formula: (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000)

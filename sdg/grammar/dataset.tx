@@ -14,31 +14,39 @@ Parameter:
 ;
 
 Feature:
-    (type=FeatureType)? name=ID ':' formula=Formula (',' description=STRING)?
+    (type=FeatureType)? name=ID ':' formula=Formula 
+        (',' description=STRING)?
+        ('scenarios' scenarios*=Scenario 'end')?
+;
+
+Scenario:
+    name=ID ':' formula=Formula
 ;
 
 FeatureType:
-    'int' | 'float' | 'string' | 'bool' | 'object'
+    'int' | 'float' | 'string' | 'bool'
 ;
 
 Target:
     name=ID ':' type=ID
         'description:' description=STRING
         'formula:' formula=Formula
+        ('scenarios' scenarios*=Scenario 'end')?
     'end'
 ;
 
 Drift:
     'drift' 'on' variable=ID 
-        'formula:' formula=Formula
         'points' drift_points*=DriftPoint 'end'
     'end'
 ;
 
 DriftPoint:
-    trigger=INT ':' type=DriftType
+    trigger=INT ':' drift_type=DriftType (scenario_name=ID | is_return?='return')
         ('duration:' duration=INT)?
+        ('interval:' interval=INT)?
         ('transition:' transition_steps=INT)?
+    'end'
 ;
 
 DriftType: 
