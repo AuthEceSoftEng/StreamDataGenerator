@@ -8,7 +8,7 @@ Dataset:
 ;
 
 Parameter:
-    'PARAM' name=ID ':' type=FeatureType ',' description=STRING ',' default=Value ';'
+    'PARAM' name=ID ':' type=ParameterType ',' description=STRING ',' default=Value ';'
 ;
 
 Feature:
@@ -24,6 +24,10 @@ Drift:
 ;
 
 FeatureType:
+    'int' | 'float' | 'string' | 'bool'
+;
+
+ParameterType:
     'int' | 'float' | 'string' | 'bool'
 ;
 
