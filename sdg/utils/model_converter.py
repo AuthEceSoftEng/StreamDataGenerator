@@ -15,7 +15,7 @@ def _generate_uniform_integer_distribution(rangemin, rangemax):
 
 
 def _generate_gaussian_distribution(mu, sigma):
-    return f"self._rng.gauss(mu={mu}, sigma={sigma})"
+    return f"self._rng.gauss({mu}, {sigma})"
 
 
 def _generate_categorical_random(categories):
@@ -110,19 +110,11 @@ def convert_model_to_dict(model):
     for feature in getattr(model, 'features', []):
         default_formula = convert_formula(getattr(feature, 'formula', ""))
 
-        scenarios = {}
-        for scenario in getattr(feature, 'scenarios', []):
-            scenario_name = getattr(scenario, 'name', "")
-            scenario_formula = convert_formula(
-                getattr(scenario, 'formula', ""))
-            scenarios[scenario_name] = scenario_formula
-
         result["features"].append({
             "name": feature.name,
+            "type": _get_type_string(getattr(feature, 'type', None)),
             "description": _decode_escapes(getattr(feature, 'description', "")),
-            "default_formula": default_formula,
-            "scenarios": scenarios,
-            "type": _get_type_string(getattr(feature, 'type', None))
+            "formula": default_formula,
         })
 
     # Target
@@ -130,52 +122,41 @@ def convert_model_to_dict(model):
     if target:
         default_formula = convert_formula(getattr(target, 'formula', ""))
 
-        scenarios = {}
-        for scenario in getattr(target, 'scenarios', []):
-            scenario_name = getattr(scenario, 'name', "")
-            scenario_code = convert_formula((scenario, 'formula', ""))
-            scenarios[scenario_name] = scenario_code
-            
-            result["target"] = {
-                "name": target.name,
-                "description": _decode_escapes(getattr(target, 'description', "")),
-                "classtype": getattr(target, 'type', ""),
-                "formula": default_formula,
-                "scenarios": scenarios
-            }
+        result["target"] = {
+            "name": target.name,
+            "description": _decode_escapes(getattr(target, 'description', "")),
+            "classtype": getattr(target, 'type', ""),
+            "formula": default_formula,
+        }
 
     # Build lookup map for named formulas
-    variable_formulas = {}
+    feature_formulas = {}
     for feature in result["features"]:
-        variable_formulas[feature["name"]] = feature["scenarios"]
-    variable_formulas[result["target"]["name"]] = result["target"]["scenarios"]
+        feature_formulas[feature["name"]] = feature["formula"]
+    feature_formulas[result["target"]["name"]] = result["target"]["formula"]
 
     # Drifts
     for drift in getattr(model, 'drifts', []):
-        drift_variable = getattr(drift, 'variable', "")
-        feature_scenarios = variable_formulas.get(drift_variable, {})
-        
-        for point in getattr(drift, 'drift_points', []):
-            trigger = getattr(point, 'trigger', 0)
-            drift_type = getattr(point, 'drift_type', 'sudden')
-            scenario_name = getattr(point, 'scenario_name', None)
-            duration = getattr(point, 'duration', None)
-            interval = getattr(point, 'interval', None)
-            transition = getattr(point, 'transition_steps', None)
-            
-            drift_formula = feature_scenarios.get(scenario_name, "")
-            
-            drift_dict = {
-                "variable": drift_variable,
-                "type": drift_type,
-                "trigger_point": trigger,
-                "duration": duration,
-                "interval": interval,
-                "transition_steps": transition,
-                "formula": drift_formula,
-                "scenario_name": scenario_name
-            }
-            result["drifts"].append(drift_dict)
+        drift_feature = getattr(drift, 'variable', "")
+
+    # Get drift types (list of strings like 'sudden', 'gradual', etc.)
+        drift_types = getattr(drift, 'drift_types', []) or []
+
+        # Get scenarios (list of Formula strings)
+        raw_scenarios = getattr(drift, 'scenarios', []) or []
+        scenarios = [convert_formula(s) for s in raw_scenarios]
+
+        # Include the original/default formula as the first scenario
+        default_formula = feature_formulas.get(drift_feature, "")
+        if default_formula:
+            scenarios.insert(0, default_formula)
+
+        drift_dict = {
+            "feature": drift_feature,
+            "drift_types": drift_types,
+            "scenarios": scenarios,
+        }
+        result["drifts"].append(drift_dict)
 
     # Run config
     run_config = getattr(model, 'run_config', None)

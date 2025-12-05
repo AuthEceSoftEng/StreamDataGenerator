@@ -3,92 +3,45 @@ import os
 from jinja2 import Environment, FileSystemLoader
 
 
-# def prepare_feature_for_template(feature):
-#     """Prepare feature dictionary for template."""
-#     feat_data = {
-#         "name": feature["name"],
-#         "description": feature["description"],
-#         "formula": feature["formula"],
-#         "type": feature["type"],
-#         "has_drift": "drift" in feature
-#     }
-
-#     if feat_data["has_drift"]:
-#         drift_funcs = []
-#         # Function 0 is the base formula
-#         drift_funcs.append({
-#             "name": f"_{feature['name']}_function_0",
-#             "formula": feature["formula"]
-#         })
-#         # Subsequent functions from drift formulas
-#         for i, df in enumerate(feature["drift"]["formulas"]):
-#             drift_funcs.append({
-#                 "name": f"_{feature['name']}_function_{i+1}",
-#                 "formula": df["value"]
-#             })
-#         feat_data["drift_functions"] = drift_funcs
-
-#     return feat_data
+def prepare_feature_for_template(feature):
+    """Prepare feature dictionary for template."""
+    return {
+        "name": feature["name"],
+        "description": feature["description"],
+        "formula": feature["formula"],
+        "type": feature["type"]
+    }
 
 
-# def prepare_target_for_template(target):
-#     """Prepare target dictionary for template."""
-#     target_data = {
-#         "name": target["name"],
-#         "description": target["description"],
-#         "classtype": target["classtype"],
-#         "formula": target["formula"],
-#         "has_drift": "drift" in target
-#     }
-
-#     if target_data["has_drift"]:
-#         drift_funcs = []
-#         # Function 0 is the base formula
-#         drift_funcs.append({
-#             "name": f"_{target['name']}_function_0",
-#             "formula": target["formula"]
-#         })
-#         # Subsequent functions from drift formulas
-#         for i, df in enumerate(target["drift"]["formulas"]):
-#             drift_funcs.append({
-#                 "name": f"_{target['name']}_function_{i+1}",
-#                 "formula": df["value"]
-#             })
-#         target_data["drift_functions"] = drift_funcs
-
-#     return target_data
+def prepare_target_for_template(target):
+    """Prepare target dictionary for template."""
+    return {
+        "name": target["name"],
+        "description": target["description"],
+        "classtype": target["classtype"],
+        "formula": target["formula"]
+    }
 
 def prepare_drifts_for_template(drifts):
-    """Group drifts by variable and prepare metadata."""
-    drift_map = {}
+    """Prepare drifts for template with feature, drift_types, and scenarios."""
+    drift_specs = []
+    has_gradual_or_incremental = False
+    has_recurring = False
 
     for drift in drifts:
-        var_name = drift["variable"]
-        if var_name not in drift_map:
-            drift_map[var_name] = []
-
-        drift_map[var_name].append({
-            "type": drift["type"],
-            "formula": drift["formula"],
-            "trigger_point": drift["trigger_point"] or 0,
-            "duration": drift["duration"],
-            "interval": drift["interval"],
-            "transition_steps": drift["transition_steps"]
-        })
+        drift_types = drift["drift_types"]
+        if "gradual" in drift_types or "incremental" in drift_types:
+            has_gradual_or_incremental = True
+        if "recurring" in drift_types:
+            has_recurring = True
         
-    # Sorting drifts by trigger point within each variable
-    for var_name in drift_map:
-        drift_map[var_name].sort(key=lambda d: d["trigger_point"])
-        
-    # Return list of drift specifications
-    drift_specs = []
-    for var_name, drifts_list in drift_map.items():
         drift_specs.append({
-            "variable": var_name,
-            "drifts": drifts_list
+            "feature": drift["feature"],
+            "drift_types": drift_types,
+            "scenarios": drift["scenarios"]
         })
 
-    return drift_specs
+    return drift_specs, has_gradual_or_incremental, has_recurring
 
 
 def generate(dataset_dict):
@@ -99,7 +52,7 @@ def generate(dataset_dict):
         dataset_dict: Dictionary representation of the dataset (from model_converter)
     """
     
-    drifts = prepare_drifts_for_template(dataset_dict.get("drifts", []))
+    drifts, has_gradual_or_incremental, has_recurring = prepare_drifts_for_template(dataset_dict.get("drifts", []))
     
     # Prepare data for template
     context = {
@@ -110,7 +63,8 @@ def generate(dataset_dict):
         "target": dataset_dict["target"],
         "drifts": drifts,
         "has_drift": bool(drifts),
-        
+        "has_gradual_or_incremental": has_gradual_or_incremental,
+        "has_recurring": has_recurring,
     }
 
     if "run" in dataset_dict and "arguments" in dataset_dict["run"]:

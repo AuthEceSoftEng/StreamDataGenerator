@@ -2,7 +2,7 @@ dataset Agrawal0DataGenerator
     description: "Stream generator introduced by Agrawal et al.\n\n Relevant paper:\n Agrawal, R., Ghosh, S., Imielinski, T., Iyer, B., & Swami, A. N. (1992).\n An interval classifier for database mining applications. In VLDB (Vol. 92, pp. 560-573).\n Available online: https://agrawal-family.com/rakesh/papers/vldb92ic.pdf"
     parameters
         seed: "The seed of the random generator"
-    end
+    end_parameters
     features
         float salary: UniformFloat(20000, 150000), "Salary"
         float commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
@@ -13,20 +13,17 @@ dataset Agrawal0DataGenerator
         float housevalue: UniformFloat(50000 * zipcode, 100000 * zipcode), "House Value"
         int houseyears: UniformInteger(1, 30), "Years House Owned"
         float loan: UniformFloat(0, 500000), "Total Loan Amount"
-    end
-    target loanapproval:Binary
+    end_features
+    target loanapproval: Binary
         description: "Loan Approval (classification function 0 of the original paper is used)"
         formula: age < 40 or 60 <= age
-    end
     drifts
-        formulas
-            growth
-            crisis:
         drift on loanapproval
-            type: sudden
-            formula: (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000)
-            at: 150
-        end
-    end
+            type: sudden,
+            scenarios
+                (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000),
+            end_scenarios
+        end_drift
+    end_drifts
     run seed=42
-end
+end_dataset

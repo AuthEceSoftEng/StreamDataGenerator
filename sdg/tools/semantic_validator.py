@@ -41,8 +41,10 @@ class SemanticValidator:
             
         if getattr(self.model, 'drifts', None):
             for drift in self.model.drifts:
-                if drift.formula:
-                    formulas.append(drift.formula)
+                # Changed: iterate over scenarios list instead of single formula
+                for scenario in getattr(drift, 'scenarios', []):
+                    if scenario:
+                        formulas.append(scenario)
         
         return formulas
     
@@ -90,66 +92,40 @@ class SemanticValidator:
             elif target_name and var == target_name:
                 # target drift can reference all features
                 allowed |= set(feature_order)
-            else:
-                # Unknown variable; error will be added in check_drift_consistency
-                allowed = allowed  # keep params to avoid cascade of undefineds
             
-            free_vars = self._extract_variables(drift.formula)
-            undefined = free_vars - allowed
-            if undefined:
-                self.errors.append(
-                    f"Drift on '{var}': undefined variables {undefined} in formula '{drift.formula}'"
-                )
+            # Changed: validate each scenario formula instead of single drift.formula
+            for scenario in getattr(drift, 'scenarios', []):
+                free_vars = self._extract_variables(scenario)
+                undefined = free_vars - allowed
+                if undefined:
+                    self.errors.append(
+                        f"Drift on '{var}': undefined variables {undefined} in scenario '{scenario}'"
+                    )
         
     def check_drift_consistency(self):
         """Verify drift configurations are consistent."""
-        # Ensure drift variable exists
         feature_names = {f.name for f in (self.model.features or [])}
         target_name = getattr(self.model.target, 'name', None)
         
         for drift in getattr(self.model, 'drifts', []):
             var = getattr(drift, 'variable', None)
-            drift_points = getattr(drift, 'drift_points', [])
             
             # Variable existence
             if var not in feature_names and var != target_name:
                 self.errors.append(f"Drift references unknown variable '{var}'")
             
-            # Formula presence
-            if not getattr(drift, 'formula', None):
-                self.errors.append(f"Drift on '{var}': missing drift formula")
+            # Check that at least one scenario is provided
+            scenarios = getattr(drift, 'scenarios', [])
+            if not scenarios:
+                self.errors.append(f"Drift on '{var}': at least one scenario is required")
             
-            # Validate each drift point
-            for point in drift_points:
-                dtype = getattr(point, 'type', None)
-                trig = getattr(point, 'trigger', None)
-                dur = getattr(point, 'duration', None)
-                trans = getattr(point, 'transition_steps', None)
-                
-                # Type validity
-                valid_types = {'sudden', 'gradual', 'incremental', 'recurring'}
+            # Validate drift types if provided
+            drift_types = getattr(drift, 'drift_types', [])
+            valid_types = {'sudden', 'gradual', 'incremental', 'recurring'}
+            for dtype in drift_types:
                 if dtype not in valid_types:
-                    self.errors.append(f"Drift on '{var}' at {trig}: invalid type '{dtype}'")
-                
-                # Trigger must be non-negative integer
-                if trig is None or not isinstance(trig, int) or trig < 0:
-                    self.errors.append(f"Drift on '{var}': trigger must be a non-negative integer")
-                
-                # Type-specific constraints
-                if dtype == 'gradual':
-                    if trans is None or not isinstance(trans, int) or trans <= 0:
-                        self.errors.append(f"Drift on '{var}' at {trig}: gradual requires 'transition' > 0")
-                else:
-                    if trans is not None and (not isinstance(trans, int) or trans < 0):
-                        self.errors.append(f"Drift on '{var}' at {trig}: 'transition' must be positive if provided")
-                
-                if dtype == 'recurring':
-                    if dur is None or not isinstance(dur, int) or dur <= 0:
-                        self.errors.append(f"Drift on '{var}' at {trig}: recurring requires 'duration' > 0")
-                else:
-                    if dur is not None and (not isinstance(dur, int) or dur < 0):
-                        self.errors.append(f"Drift on '{var}' at {trig}: 'duration' must be positive if provided")
-                
+                    self.errors.append(f"Drift on '{var}': invalid drift type '{dtype}'")
+
     def check_parameter_usage(self):
         """Verify all defined parameters are used in run config."""
         if not self.model.parameters or not self.model.run_config:

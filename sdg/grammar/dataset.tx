@@ -1,12 +1,12 @@
 Dataset:
     'dataset' name=ID
         ('description:' description=STRING)?
-        ('parameters' parameters*=Parameter 'end')?
-        ('features' features*=Feature 'end')?
+        ('parameters' parameters*=Parameter 'end_parameters')?
+        ('features' features*=Feature 'end_features')?
         'target' target=Target
-        ('drifts' drifts*=Drift 'end')?
+        ('drifts' drifts*=Drift 'end_drifts')?
         ('run' run_config=RunConfig)?
-    'end'
+    'end_dataset'
 ;
 
 Parameter:
@@ -16,11 +16,6 @@ Parameter:
 Feature:
     (type=FeatureType)? name=ID ':' formula=Formula 
         (',' description=STRING)?
-        ('scenarios' scenarios*=Scenario 'end')?
-;
-
-Scenario:
-    name=ID ':' formula=Formula
 ;
 
 FeatureType:
@@ -31,22 +26,13 @@ Target:
     name=ID ':' type=ID
         'description:' description=STRING
         'formula:' formula=Formula
-        ('scenarios' scenarios*=Scenario 'end')?
-    'end'
 ;
 
 Drift:
-    'drift' 'on' variable=ID 
-        'points' drift_points*=DriftPoint 'end'
-    'end'
-;
-
-DriftPoint:
-    trigger=INT ':' drift_type=DriftType (scenario_name=ID | is_return?='return')
-        ('duration:' duration=INT)?
-        ('interval:' interval=INT)?
-        ('transition:' transition_steps=INT)?
-    'end'
+    'drift' 'on' variable=ID
+        ('type:' drift_types+=DriftType (',' drift_types+=DriftType)* (',')?)?
+        'scenarios' scenarios+=Formula[',\n'] (',')? 'end_scenarios'
+    'end_drift'
 ;
 
 DriftType: 
@@ -66,7 +52,8 @@ Value:
 ;
 
 Formula:
-    // Match until a comma followed by a quote AND end of line (for features)
-    // OR match everything until newline (for target/others)
-    /(.+?(?=,\s*"[^"]*"\s*(\r?\n|$)))|([^\n]+)/
+    // Match text until:
+    // - a comma followed by optional whitespace and a quote (for features)
+    // - end of line (for target formulas)
+   /[^\n]+?(?=,\s*")|[^\n]+?(?=\n)/
 ;
