@@ -3,7 +3,7 @@ Dataset:
         ('description:' description=STRING)?
         ('parameters' parameters*=Parameter 'end_parameters')?
         ('features' features*=Feature 'end_features')?
-        'target' target=Target
+        'target' target=Target 'end_target'
         ('drifts' drifts*=Drift 'end_drifts')?
         ('run' run_config=RunConfig)?
     'end_dataset'
@@ -30,8 +30,8 @@ Target:
 
 Drift:
     'drift' 'on' variable=ID
-        ('type:' drift_types+=DriftType (',' drift_types+=DriftType)* (',')?)?
-        'scenarios' scenarios+=Formula[',\n'] (',')? 'end_scenarios'
+        ('type:' drift_types+=DriftType[','] (',')?)?
+        'scenarios' scenarios+=Formula[','] (',')? 'end_scenarios'
     'end_drift'
 ;
 
@@ -52,8 +52,5 @@ Value:
 ;
 
 Formula:
-    // Match text until:
-    // - a comma followed by optional whitespace and a quote (for features)
-    // - end of line (for target formulas)
-   /[^\n]+?(?=,\s*")|[^\n]+?(?=\n)/
+    /(?:[^,\n(]|\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))+/
 ;
