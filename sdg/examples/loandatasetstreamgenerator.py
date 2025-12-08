@@ -2,70 +2,66 @@ import random
 import itertools
 import math
 
-class {{ name }}:
+class LoanDatasetStreamGenerator:
     """
-    {{ description }}
+    A stream generator for loans, introduced in publication:
+ Kalaitzidis, E., Diamantopoulos, T., Michailoudis, A., Symeonidis, A. L. (2025).
+ AML4S: An AutoML Pipeline for Data Streams. Machine Learning and Knowledge Extraction 7.3, 87.
+ This generator is based on the generator introduced by Agrawal et al.
+ (Agrawal, R., Ghosh, S., Imielinski, T., Iyer, B., & Swami, A. N. (1992).
+ An interval classifier for database mining applications. In VLDB (Vol. 92, pp. 560-573).
+ Available: https://agrawal-family.com/rakesh/papers/vldb92ic.pdf.)
 
     Features:
-    {%- for feature in features %}
-    - {{ feature.name }}: {{ feature.description }}
-    {%- endfor %}
+    - salary: Salary
+    - commission: Commission
+    - age: Age
+    - educationlevel: Education Level
+    - zipcode: Zip Code of the Town
+    - housevalue: House Value
+    - loanyears: Years of the Loan
+    - loan: Total Loan Amount
 
     Target:
-    - {{ target.name }}: {{ target.description }}
+    - loanapproval: Loan Approval
     """
 
     # Default values for drift parameters
-    {%- if has_gradual_or_incremental %}
     DEFAULT_TRANSITION_STEPS = 100
-    {%- endif %}
-    {%- if has_recurring %}
-    DEFAULT_RECURRING_INTERVAL = 1000
-    DEFAULT_RECURRING_DURATION = 500
-    {%- endif %}
 
-    def __init__(self, {{ parameters|join(', ', attribute='name') }}):
+    def __init__(self, seed):
         """
         Initializes this random data generator
-
-        {%- for param in parameters %}
-        :param {{ param.name }}: {{ param.description }}
-        {%- endfor %}
+        :param seed: The seed of the random generator
         """
-        {%- for param in parameters %}
-        self.{{ param.name }} = {{ param.name }}
-        {%- endfor %}
+        self.seed = seed
         self._rng = random.Random(self.seed)
         self._instance_count = 0
-
-        {%- if has_drift %}
         # Drift configurations by feature/target
         # Each drift has: feature name, allowed drift_types, and scenario formulas
         self._drift_configs = {
-        {%- for drift in drifts %}
-            "{{ drift.variable }}": {
-                "drift_types": {{ drift.drift_types | tojson }},
-                "scenarios": {{ drift.scenarios | tojson }}
+            "salary": {
+                "drift_types": ["sudden", "gradual"],
+                "scenarios": ["self._rng.uniform(20000, 60000)", "self._rng.uniform(10000, 40000)", "self._rng.uniform(30000, 80000)"]
             },
-        {%- endfor %}
+            "loanapproval": {
+                "drift_types": ["sudden", "gradual"],
+                "scenarios": ["(loan \u003c= 20 * salary + 0.5 * commission) and (loan \u003c= 0.7 * housevalue) and ((age \u003c 20 and salary + 0.5 * commission \u003e= 20000) or (age \u003c 40 and salary + 0.5 * commission \u003e= 25000) or (age \u003c 60 and salary + 0.5 * commission \u003e= 30000))", "(loan \u003c= 10 * salary) and (loan \u003c= 0.5 * housevalue) and ((age \u003c 20 and salary \u003e= 30000) or (age \u003c 40 and salary \u003e= 40000) or (age \u003c 60 and salary \u003e= 50000))", "(loan \u003c= 50 * salary + commission) and (loan \u003c= 0.9 * housevalue) and ((age \u003c 20 and salary + commission \u003e= 10000) or (age \u003c 40 and salary + commission \u003e= 15000) or (age \u003c 60 and salary + commission \u003e= 20000))"]
+            },
         }
 
         # Drift runtime state per feature (list of drift configs)
         self._drift_state = {
-        {%- for drift in drifts %}
-            "{{ drift.variable }}": [],
-        {%- endfor %}
+            "salary": [],
+            "loanapproval": [],
         }
-        {%- endif %}
 
-        self.dataset_name = "{{ name }}"
-        self.feature_names = [{% for feature in features %}"{{ feature.name }}"{% if not loop.last %}, {% endif %}{% endfor %}]
-        self.target_name = "{{ target.name }}"
+        self.dataset_name = "LoanDatasetStreamGenerator"
+        self.feature_names = ["salary", "commission", "age", "educationlevel", "zipcode", "housevalue", "loanyears", "loan"]
+        self.target_name = "loanapproval"
 
-    {%- if has_drift %}
-
-    def add_drift(self, feature_name, drift_points, drift_type=None, scenario_idx=None{% if has_gradual_or_incremental %},
-                        transition_steps=None{% endif %}{% if has_recurring %}, interval=None, duration=None{% endif %}):
+    def add_drift(self, feature_name, drift_points, drift_type=None, scenario_idx=None,
+                        transition_steps=None):
         """
         Configure drifts for a feature with drift points and parameters.
         Multiple drift types/points can be provided in one call (parallel arrays).
@@ -115,15 +111,8 @@ class {{ name }}:
                 "current_drift_type": dtype,
                 "scenario_idx_config": sidx,
                 "current_scenario_idx": 0,
-                {%- if has_gradual_or_incremental %}
                 "transition_steps": max(1, transition_steps) if transition_steps else self.DEFAULT_TRANSITION_STEPS,
                 "transition_progress": 0,
-                {%- endif %}
-                {%- if has_recurring %}
-                "recurring_interval": max(1, interval) if interval else self.DEFAULT_RECURRING_INTERVAL,
-                "recurring_duration": max(1, duration) if duration else self.DEFAULT_RECURRING_DURATION,
-                "recurring_start": None,
-                {%- endif %}
             }
             self._drift_state[feature_name].append(new_drift)
 
@@ -153,28 +142,13 @@ class {{ name }}:
         state["current_scenario_idx"] = scenario_idx
         print(f"[DRIFT] feature='{feature_name}' type='{state.get('current_drift_type')}' "
               f"scenario={scenario_idx} at instance={self._instance_count}")
-        {%- if has_gradual_or_incremental %}
         if state.get("current_drift_type") in ("gradual", "incremental"):
             state["transition_progress"] = 0
-        {%- endif %}
-        {%- if has_recurring %}
-        if state.get("current_drift_type") == "recurring":
-            state["recurring_start"] = self._instance_count
-        {%- endif %}
 
     def _handle_ongoing_drift(self, state):
         """Handle state updates for ongoing drifts."""
         if not state["active"]:
             return
-        {%- if has_recurring %}
-        if state.get("current_drift_type") == "recurring":
-            elapsed = self._instance_count - (state["recurring_start"] or 0)
-            if elapsed >= state["recurring_duration"]:
-                state["active"] = False
-                state["current_scenario_idx"] = 0
-                next_start = state["recurring_start"] + state["recurring_interval"]
-                state["drift_point"] = next_start
-        {%- endif %}
 
     def _get_current_formula(self, feature_name, default_formula):
         """
@@ -230,20 +204,13 @@ class {{ name }}:
                         "drift_type": state.get("current_drift_type"),
                         "scenario_idx": state.get("current_scenario_idx"),
                         "drift_point": state.get("drift_point"),
-                        {%- if has_gradual_or_incremental %}
                         "transition_steps": state.get("transition_steps"),
-                        {%- endif %}
-                        {%- if has_recurring %}
-                        "recurring_interval": state.get("recurring_interval"),
-                        "recurring_duration": state.get("recurring_duration"),
-                        {%- endif %}
                     }
                     for state in self._drift_state[feature]
                 ]
             }
             for feature, config in self._drift_configs.items()
         }
-    {%- endif %}
 
     def __iter__(self):
         """
@@ -252,36 +219,28 @@ class {{ name }}:
         :returns: A generator of tuples (X, y): X is feature list, y is target.
         """
         while True:
-            {%- if has_drift %}
             self._check_and_apply_drifts()
-            {%- endif %}
-
-            {%- for feature in features %}
-            {%- if has_drift %}
-            _{{ feature.name }}_expr = self._get_current_formula("{{ feature.name }}", {{ feature.formula | tojson }})
-            {{ feature.name }} = eval(_{{ feature.name }}_expr)
-            {%- else %}
-            {{ feature.name }} = {{ feature.formula }}
-            {%- endif %}
-            {%- endfor %}
-
-            {%- if has_drift %}
-            _{{ target.name }}_expr = self._get_current_formula("{{ target.name }}", {{ target.formula | tojson }})
-            {%- if target.classtype == 'Binary' %}
-            {{ target.name }} = 1 if eval(_{{ target.name }}_expr) else 0
-            {%- else %}
-            {{ target.name }} = eval(_{{ target.name }}_expr)
-            {%- endif %}
-            {%- else %}
-            {%- if target.classtype == 'Binary' %}
-            {{ target.name }} = 1 if ({{ target.formula }}) else 0
-            {%- else %}
-            {{ target.name }} = {{ target.formula }}
-            {%- endif %}
-            {%- endif %}
+            _salary_expr = self._get_current_formula("salary", "self._rng.uniform(20000, 60000)")
+            salary = eval(_salary_expr)
+            _commission_expr = self._get_current_formula("commission", "self._rng.uniform(0, 0.1 * salary)")
+            commission = eval(_commission_expr)
+            _age_expr = self._get_current_formula("age", "self._rng.randint(20, 80)")
+            age = eval(_age_expr)
+            _educationlevel_expr = self._get_current_formula("educationlevel", "self._rng.randint(0, 4)")
+            educationlevel = eval(_educationlevel_expr)
+            _zipcode_expr = self._get_current_formula("zipcode", "self._rng.randint(0, 8)")
+            zipcode = eval(_zipcode_expr)
+            _housevalue_expr = self._get_current_formula("housevalue", "self._rng.uniform(100000 * (8 - zipcode + 1), 2 * 100000 * (8 - zipcode + 1))")
+            housevalue = eval(_housevalue_expr)
+            _loanyears_expr = self._get_current_formula("loanyears", "self._rng.randint(10, 30)")
+            loanyears = eval(_loanyears_expr)
+            _loan_expr = self._get_current_formula("loan", "self._rng.uniform(10000, 0.85 * housevalue)")
+            loan = eval(_loan_expr)
+            _loanapproval_expr = self._get_current_formula("loanapproval", "(loan <= 20 * salary + 0.5 * commission) and (loan <= 0.7 * housevalue) and ((age < 20 and salary + 0.5 * commission >= 20000) or (age < 40 and salary + 0.5 * commission >= 25000) or (age < 60 and salary + 0.5 * commission >= 30000))")
+            loanapproval = 1 if eval(_loanapproval_expr) else 0
 
             self._instance_count += 1
-            yield [{{ features|map(attribute='name')|join(', ') }}], {{ target.name }}
+            yield [salary, commission, age, educationlevel, zipcode, housevalue, loanyears, loan], loanapproval
 
     def get_n_instances(self, numinstances):
         """
@@ -289,23 +248,18 @@ class {{ name }}:
         """
         return itertools.islice(self, numinstances)
 
-{%- if run_config %}
-
 if __name__ == '__main__':
     import argparse
     
-    parser = argparse.ArgumentParser(description='{{ name }} - Stream Data Generator')
-    {% for arg in run_config.arguments -%}
-    parser.add_argument('--{{ arg.name }}', type=type({{ arg.value }}), default={{ arg.value }}, help='{{ parameters|selectattr("name", "equalto", arg.name)|map(attribute="description")|first|default("Parameter " ~ arg.name) }}')
-    {% endfor -%}
+    parser = argparse.ArgumentParser(description='LoanDatasetStreamGenerator - Stream Data Generator')
+    parser.add_argument('--seed', type=type(42), default=42, help='The seed of the random generator')
     parser.add_argument('--samples', type=int, default=150, help='Number of samples to generate')
     
     args = parser.parse_args()
     
     # Initialize generator with parsed arguments
-    gen = {{ name }}({% for arg in run_config.arguments %}{{ arg.name }}=args.{{ arg.name }}{% if not loop.last %}, {% endif %}{% endfor %})
+    gen = LoanDatasetStreamGenerator(seed=args.seed)
     
     # Generate and print samples
     for i, (X, y) in enumerate(gen.get_n_instances(args.samples)):
         print(f"Instance {i}: X={X}, y={y}")
-{%- endif %}

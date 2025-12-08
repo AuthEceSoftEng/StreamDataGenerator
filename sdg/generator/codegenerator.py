@@ -36,7 +36,7 @@ def prepare_drifts_for_template(drifts):
             has_recurring = True
         
         drift_specs.append({
-            "feature": drift["feature"],
+            "variable": drift["variable"],
             "drift_types": drift_types,
             "scenarios": drift["scenarios"]
         })

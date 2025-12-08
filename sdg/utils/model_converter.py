@@ -137,7 +137,7 @@ def convert_model_to_dict(model):
 
     # Drifts
     for drift in getattr(model, 'drifts', []):
-        drift_feature = getattr(drift, 'variable', "")
+        drift_variable = getattr(drift, 'variable', "")
 
     # Get drift types (list of strings like 'sudden', 'gradual', etc.)
         drift_types = getattr(drift, 'drift_types', []) or []
@@ -147,12 +147,12 @@ def convert_model_to_dict(model):
         scenarios = [convert_formula(s) for s in raw_scenarios]
 
         # Include the original/default formula as the first scenario
-        default_formula = feature_formulas.get(drift_feature, "")
+        default_formula = feature_formulas.get(drift_variable, "")
         if default_formula:
             scenarios.insert(0, default_formula)
 
         drift_dict = {
-            "feature": drift_feature,
+            "variable": drift_variable,
             "drift_types": drift_types,
             "scenarios": scenarios,
         }
