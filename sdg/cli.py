@@ -12,10 +12,10 @@ def validate_command(args):
     """Validate a DSL file."""
     try:
         model = parse_file(args.file)
-        print(f"✅ Validation successful: {args.file}")
+        print(f"Validation successful: {args.file}")
         print(f"Dataset Name: {model.name}")
     except Exception as e:
-        print(f"❌ Validation failed: {e}")
+        print(f"Validation failed: {e}")
         sys.exit(1)
 
 def generate_command(args):
@@ -28,10 +28,10 @@ def generate_command(args):
         from sdg.generator.codegenerator import sdg_generate
         sdg_generate(None, model, args.output, overwrite=True, debug=False)
             
-        print(f"✅ Generated code from: {args.file}")
+        print(f"Generated code from: {args.file}")
         
     except Exception as e:
-        print(f"❌ Generation failed: {e}")
+        print(f"Generation failed: {e}")
         sys.exit(1)
 
 def convert_command(args):
@@ -42,7 +42,7 @@ def convert_command(args):
         if args.output:
             with open(args.output, 'w') as f:
                 f.write(dsl_content)
-            print(f"✅ Converted YAML to DSL: {args.output}")
+            print(f"Converted YAML to DSL: {args.output}")
         else:
             print(dsl_content)
             
@@ -60,10 +60,10 @@ def generate_docs_command(args):
         from sdg.generator.docgenerator import sdg_generate_docs
         output_path = sdg_generate_docs(None, model, args.output, overwrite=True, debug=False)
             
-        print(f"✅ Generated documentation: {output_path}")
+        print(f"Generated documentation: {output_path}")
         
     except Exception as e:
-        print(f"❌ Documentation generation failed: {e}")
+        print(f"Documentation generation failed: {e}")
         sys.exit(1)
 
 def main():
