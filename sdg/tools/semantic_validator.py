@@ -112,19 +112,30 @@ class SemanticValidator:
             
             # Variable existence
             if var not in feature_names and var != target_name:
-                self.errors.append(f"Drift references unknown variable '{var}'")
+                self.errors.append(f"Drift on '{var}': variable does not exist")
+                continue
             
             # Check that at least one scenario is provided
             scenarios = getattr(drift, 'scenarios', [])
             if not scenarios:
                 self.errors.append(f"Drift on '{var}': at least one scenario is required")
             
-            # Validate drift types if provided
+            # Validate drift types
             drift_types = getattr(drift, 'drift_types', [])
             valid_types = {'sudden', 'gradual', 'incremental', 'recurring'}
             for dtype in drift_types:
                 if dtype not in valid_types:
                     self.errors.append(f"Drift on '{var}': invalid drift type '{dtype}'")
+            
+            # NEW: Check incremental drift only applies to numeric features
+            if 'incremental' in drift_types:
+                feature = next((f for f in self.model.features if f.name == var), None)
+                target = self.model.target if target_name == var else None
+                
+                if feature and getattr(feature, 'type', 'numeric') == 'categorical':
+                    self.errors.append(f"Drift on '{var}': incremental drift cannot be applied to categorical features")
+                if target and getattr(target, 'classtype', 'numeric') == 'Binary':
+                    self.errors.append(f"Drift on '{var}': incremental drift cannot be applied to binary targets")
 
     def check_parameter_usage(self):
         """Verify all defined parameters are used in run config."""
