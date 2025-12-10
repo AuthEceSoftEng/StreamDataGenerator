@@ -4,18 +4,43 @@ import math
 
 class {{ name }}:
     """
+    {{ name }} stream generator.
+
     {{ description }}
 
-    Features:
-    {%- for feature in features %}
-    - {{ feature.name }}: {{ feature.description }}
+    Parameters
+    ----------
+    {%- for param in parameters %}
+    {{ param.name }}
+        {{ param.description }}
     {%- endfor %}
 
-    Target:
-    - {{ target.name }}: {{ target.description }}
+    Examples
+    --------
+    >>> from sdg.generators.{{ name|lower }} import {{ name }}
+
+    >>> gen = {{ name }}({% for param in parameters %}{{ param.name }}={{ param.name }}{% if not loop.last %}, {% endif %}{% endfor %})
+    >>> for X, y in gen.get_n_instances(500):
+    ...     print(X, y)
+
+    Features
+    --------
+    {%- for feature in features %}
+    {{ feature.name }} : {{ feature.type|default('numeric') }}
+        {{ feature.description }}
+    {%- endfor %}
+
+    Target
+    ------
+    {{ target.name }} : {{ target.classtype|default('numeric') }}
+        {{ target.description }}
+
+    Notes
+    -----
+    This is an infinite stream generator. Use `get_n_instances(n)` to get a
+    finite number of samples, or iterate directly for infinite streaming.
     """
 
-    # Default values for drift parameters
     {%- if has_gradual_or_incremental %}
     DEFAULT_TRANSITION_STEPS = 100
     {%- endif %}
@@ -37,275 +62,175 @@ class {{ name }}:
         {%- endfor %}
         self._rng = random.Random(self.seed)
         self._instance_count = 0
-
-        {%- if has_drift %}
-        # Drift configurations by feature/target
-        # Each drift has: feature name, allowed drift_types, and scenario formulas
-        self._drift_configs = {
-        {%- for drift in drifts %}
-            "{{ drift.variable }}": {
-                "drift_types": {{ drift.drift_types | tojson }},
-                "scenarios": {{ drift.scenarios | tojson }}
-            },
-        {%- endfor %}
-        }
-
-        # Drift runtime state per feature (list of drift configs)
-        self._drift_state = {
-        {%- for drift in drifts %}
-            "{{ drift.variable }}": [],
-        {%- endfor %}
-        }
-        {%- endif %}
-
         self.dataset_name = "{{ name }}"
         self.feature_names = [{% for feature in features %}"{{ feature.name }}"{% if not loop.last %}, {% endif %}{% endfor %}]
         self.target_name = "{{ target.name }}"
 
+        {%- if has_drift %}
+        self._drift_configs = {
+        {%- for drift in drifts %}
+            "{{ drift.variable }}": {"types": {{ drift.drift_types | tojson }}, "n_scenarios": {{ drift.scenarios | length }}},
+        {%- endfor %}
+        }
+        self._drift_state = {feature_key: [] for feature_key in self._drift_configs}
+        {%- endif %}
+
+    def _gen(self, name, features_dict):
+        """Generate feature or target value by name."""
+        {%- for feature in features %}
+        {% if loop.first %}if{% else %}elif{% endif %} name == "{{ feature.name }}":
+            return {{ feature.formula }}
+        {%- endfor %}
+        elif name == "{{ target.name }}":
+            {%- if target.classtype == 'Binary' %}
+            return 1 if ({{ target.formula }}) else 0
+            {%- else %}
+            return {{ target.formula }}
+            {%- endif %}
+        raise ValueError(f"Unknown feature or target: {name}")
+
     {%- if has_drift %}
 
-    def add_drift(self, feature_name, drift_points, drift_type=None, scenario_idx=None{% if has_gradual_or_incremental %},
-                        transition_steps=None{% endif %}{% if has_recurring %}, interval=None, duration=None{% endif %}):
-        """
-        Configure drifts for a feature with drift points and parameters.
-        Multiple drift types/points can be provided in one call (parallel arrays).
-        """
+    def _scenario(self, name, scenario_index, features_dict):
+        """Get drift scenario value by name and index."""
+        {%- for drift in drifts %}
+        {% if loop.first %}if{% else %}elif{% endif %} name == "{{ drift.variable }}":
+            {%- for scenario in drift.scenarios %}
+            {% if loop.first %}if{% else %}elif{% endif %} scenario_index == {{ loop.index0 }}:
+                {%- if drift.variable == target.name and target.classtype == 'Binary' %}
+                return 1 if ({{ scenario }}) else 0
+                {%- else %}
+                return {{ scenario }}
+                {%- endif %}
+            {%- endfor %}
+        {%- endfor %}
+        raise ValueError(f"Unknown drift scenario: {name}[{scenario_index}]")
+
+    def add_drift(self, feature_name, drift_points, drift_type=None, scenario_idx=None{% if has_gradual_or_incremental %}, transition_steps=None{% endif %}{% if has_recurring %}, interval=None, duration=None{% endif %}):
+        """Configure concept drift for a feature or target variable."""
         if feature_name not in self._drift_configs:
-            raise ValueError(f"No drift configuration for feature '{feature_name}'")
-        config = self._drift_configs[feature_name]
+            raise ValueError(f"No drift config for '{feature_name}'")
+        cfg = self._drift_configs[feature_name]
+        drift_points = [drift_points] if isinstance(drift_points, int) else drift_points
+        drift_types = [drift_type or "sudden"] * len(drift_points) if not isinstance(drift_type, list) else drift_type
+        scenario_indices = [scenario_idx] * len(drift_points) if not isinstance(scenario_idx, list) else scenario_idx
 
-        # Normalize points
-        if isinstance(drift_points, int):
-            drift_points = [drift_points]
-        num_points = len(drift_points)
-
-        # Normalize drift_type
-        if drift_type is None:
-            drift_types = ["sudden"] * num_points
-        elif isinstance(drift_type, str):
-            drift_types = [drift_type] * num_points
-        elif isinstance(drift_type, list):
-            if len(drift_type) != num_points:
-                raise ValueError(f"drift_type list length ({len(drift_type)}) must match drift_points ({num_points})")
-            drift_types = drift_type
-        else:
-            raise TypeError("drift_type must be string or list")
-
-        # Normalize scenario_idx
-        if scenario_idx is None:
-            scenario_indices = [None] * num_points
-        elif isinstance(scenario_idx, int):
-            scenario_indices = [scenario_idx] * num_points
-        elif isinstance(scenario_idx, list):
-            if len(scenario_idx) != num_points:
-                raise ValueError(f"scenario_idx list length ({len(scenario_idx)}) must match drift_points ({num_points})")
-            scenario_indices = scenario_idx
-        else:
-            raise TypeError("scenario_idx must be int, list, or None")
-
-        for i, (point, dtype, sidx) in enumerate(zip(drift_points, drift_types, scenario_indices)):
-            if config["drift_types"] and dtype not in config["drift_types"]:
-                raise ValueError(f"Drift type '{dtype}' not allowed for '{feature_name}'. Allowed: {config['drift_types']}")
-            if sidx is not None and (sidx < 0 or sidx >= len(config["scenarios"])):
-                raise ValueError(f"Invalid scenario index {sidx} at position {i} for '{feature_name}'")
-
-            new_drift = {
+        for drift_point, drift_type, scenario_index in zip(drift_points, drift_types, scenario_indices):
+            if cfg["types"] and drift_type not in cfg["types"]:
+                raise ValueError(f"Drift type '{drift_type}' not allowed for '{feature_name}'")
+            if scenario_index is not None and (scenario_index < 0 or scenario_index >= cfg["n_scenarios"]):
+                raise ValueError(f"Invalid scenario index {scenario_index}")
+            drift_state = {
                 "active": False,
-                "drift_point": point,
-                "current_drift_type": dtype,
-                "scenario_idx_config": sidx,
-                "current_scenario_idx": 0,
-                {%- if has_gradual_or_incremental %}
-                "transition_steps": max(1, transition_steps) if transition_steps else self.DEFAULT_TRANSITION_STEPS,
-                "transition_progress": 0,
-                {%- endif %}
-                {%- if has_recurring %}
-                "recurring_interval": max(1, interval) if interval else self.DEFAULT_RECURRING_INTERVAL,
-                "recurring_duration": max(1, duration) if duration else self.DEFAULT_RECURRING_DURATION,
-                "recurring_start": None,
-                {%- endif %}
+                "drift_point": drift_point,
+                "drift_type": drift_type,
+                "scenario_index_config": scenario_index,
+                "current_scenario_index": 0,
             }
-            self._drift_state[feature_name].append(new_drift)
+            {%- if has_gradual_or_incremental %}
+            drift_state["transition_steps"] = transition_steps or self.DEFAULT_TRANSITION_STEPS
+            drift_state["transition_progress"] = 0
+            {%- endif %}
+            {%- if has_recurring %}
+            drift_state["recurring_interval"] = interval or self.DEFAULT_RECURRING_INTERVAL
+            drift_state["recurring_duration"] = duration or self.DEFAULT_RECURRING_DURATION
+            drift_state["recurring_start"] = None
+            {%- endif %}
+            self._drift_state[feature_name].append(drift_state)
+        self._drift_state[feature_name].sort(key=lambda drift_state_item: drift_state_item["drift_point"])
 
-        # Keep drifts ordered by point
-        self._drift_state[feature_name].sort(key=lambda x: x["drift_point"])
+    def _check_drifts(self):
+        for feature_name, drift_states in self._drift_state.items():
+            for drift_state in drift_states:
+                if self._instance_count == drift_state["drift_point"]:
+                    drift_state["active"], drift_state["current_scenario_index"] = (
+                        True,
+                        drift_state["scenario_index_config"]
+                        if drift_state["scenario_index_config"] is not None
+                        else self._rng.randint(1, self._drift_configs[feature_name]["n_scenarios"] - 1),
+                    )
+                    {%- if has_gradual_or_incremental %}
+                    if drift_state["drift_type"] in ("gradual", "incremental"): drift_state["transition_progress"] = 0
+                    {%- endif %}
+                    {%- if has_recurring %}
+                    if drift_state["drift_type"] == "recurring": drift_state["recurring_start"] = self._instance_count
+                    {%- endif %}
+                {%- if has_recurring %}
+                elif drift_state["active"] and drift_state["drift_type"] == "recurring" and self._instance_count - drift_state["recurring_start"] >= drift_state["recurring_duration"]:
+                    drift_state["active"], drift_state["drift_point"] = False, drift_state["recurring_start"] + drift_state["recurring_interval"]
+                {%- endif %}
 
-    def _check_and_apply_drifts(self):
-        """Check if any drift should trigger based on current instance count."""
-        for feature_name, drift_list in self._drift_state.items():
-            config = self._drift_configs[feature_name]
-            for state in drift_list:
-                dtype = state.get("current_drift_type")
-                if not dtype:
-                    continue
-                if self._instance_count == state.get("drift_point"):
-                    self._initialize_drift(feature_name, state, config)
-                else:
-                    self._handle_ongoing_drift(state)
+    def _get_val(self, name, features_dict):
+        """Get value considering drift."""
+        active_drift = next((drift_state for drift_state in reversed(self._drift_state.get(name, [])) if drift_state["active"]), None)
+        if not active_drift:
+            return self._gen(name, features_dict)
+        drift_type = active_drift["drift_type"]
+        current_scenario_index = active_drift["current_scenario_index"]
 
-    def _initialize_drift(self, feature_name, state, config):
-        """Initialize drift when a drift point is hit."""
-        scenario_idx = state.get("scenario_idx_config")
-        if scenario_idx is None:
-            scenario_idx = self._rng.randint(1, len(config["scenarios"]) - 1) if len(config["scenarios"]) > 1 else 0
+        if drift_type in ("sudden", "recurring"):
+            return self._scenario(name, current_scenario_index, features_dict)
 
-        state["active"] = True
-        state["current_scenario_idx"] = scenario_idx
-        print(f"[DRIFT] feature='{feature_name}' type='{state.get('current_drift_type')}' "
-              f"scenario={scenario_idx} at instance={self._instance_count}")
         {%- if has_gradual_or_incremental %}
-        if state.get("current_drift_type") in ("gradual", "incremental"):
-            state["transition_progress"] = 0
-        {%- endif %}
-        {%- if has_recurring %}
-        if state.get("current_drift_type") == "recurring":
-            state["recurring_start"] = self._instance_count
-        {%- endif %}
+        if drift_type in ("gradual", "incremental"):
+            # if transition completed, use drift scenario
+            if active_drift["transition_progress"] >= active_drift["transition_steps"]:
+                return self._scenario(name, current_scenario_index, features_dict)
 
-    def _handle_ongoing_drift(self, state):
-        """Handle state updates for ongoing drifts."""
-        if not state["active"]:
-            return
-        {%- if has_recurring %}
-        if state.get("current_drift_type") == "recurring":
-            elapsed = self._instance_count - (state["recurring_start"] or 0)
-            if elapsed >= state["recurring_duration"]:
-                state["active"] = False
-                state["current_scenario_idx"] = 0
-                next_start = state["recurring_start"] + state["recurring_interval"]
-                state["drift_point"] = next_start
+            transition_ratio = active_drift["transition_progress"] / active_drift["transition_steps"]
+            active_drift["transition_progress"] += 1
+
+            if drift_type == "gradual":
+                # probabilistic switch: use drift scenario with probability=transition_ratio
+                return self._scenario(name, current_scenario_index, features_dict) if self._rng.random() < transition_ratio else self._gen(name, features_dict)
+
+            # incremental: interpolate between default and drift
+            return (1 - transition_ratio) * self._gen(name, features_dict) + transition_ratio * self._scenario(name, current_scenario_index, features_dict)
         {%- endif %}
 
-    def _get_current_formula(self, feature_name, default_formula):
-        """
-        Get the current formula for a feature considering drift state.
-        If multiple drifts are active, the last activated one wins.
-        """
-        if feature_name not in self._drift_state:
-            return default_formula
-
-        # pick the most recently activated active drift (last in list that is active)
-        active = None
-        for state in reversed(self._drift_state[feature_name]):
-            if state.get("active"):
-                active = state
-                break
-        if not active:
-            return default_formula
-
-        config = self._drift_configs[feature_name]
-        scenario_idx = active["current_scenario_idx"]
-        if scenario_idx < 0 or scenario_idx >= len(config["scenarios"]):
-            return default_formula
-
-        target_formula = config["scenarios"][scenario_idx]
-        dtype = active.get("current_drift_type")
-
-        if dtype in ("sudden", "recurring"):
-            return target_formula
-
-        if dtype in ("gradual", "incremental"):
-            progress = active["transition_progress"]
-            total = active["transition_steps"]
-            if progress >= total:
-                return target_formula
-            active["transition_progress"] += 1
-            ratio = progress / total
-            if dtype == "gradual":
-                return target_formula if self._rng.random() < ratio else default_formula
-            return f"(1 - {ratio}) * ({default_formula}) + {ratio} * ({target_formula})"
-
-        return target_formula
+        return self._scenario(name, current_scenario_index, features_dict)
 
     def get_drift_info(self):
-        """Return drift configs and state."""
-        return {
-            feature: {
-                "drift_types": config["drift_types"],
-                "num_scenarios": len(config["scenarios"]),
-                "scenarios": config["scenarios"],
-                "active_drifts": [
-                    {
-                        "active": state.get("active", False),
-                        "drift_type": state.get("current_drift_type"),
-                        "scenario_idx": state.get("current_scenario_idx"),
-                        "drift_point": state.get("drift_point"),
-                        {%- if has_gradual_or_incremental %}
-                        "transition_steps": state.get("transition_steps"),
-                        {%- endif %}
-                        {%- if has_recurring %}
-                        "recurring_interval": state.get("recurring_interval"),
-                        "recurring_duration": state.get("recurring_duration"),
-                        {%- endif %}
-                    }
-                    for state in self._drift_state[feature]
-                ]
-            }
-            for feature, config in self._drift_configs.items()
-        }
+        """Return drift configuration and state."""
+        return {feature_name: {"types": config["types"], "n_scenarios": config["n_scenarios"], "drifts": [
+            {"active": drift_state["active"], "drift_type": drift_state["drift_type"], "scenario_idx": drift_state["current_scenario_index"], "drift_point": drift_state["drift_point"]}
+            for drift_state in self._drift_state[feature_name]]} for feature_name, config in self._drift_configs.items()}
     {%- endif %}
 
     def __iter__(self):
-        """
-        Generates and returns new data instances.
-
-        :returns: A generator of tuples (X, y): X is feature list, y is target.
-        """
         while True:
             {%- if has_drift %}
-            self._check_and_apply_drifts()
+            self._check_drifts()
             {%- endif %}
-
-            {%- for feature in features %}
+            features_dict = {}
+            for feature_name in self.feature_names:
+                {%- if has_drift %}
+                features_dict[feature_name] = self._get_val(feature_name, features_dict) if feature_name in self._drift_state else self._gen(feature_name, features_dict)
+                {%- else %}
+                features_dict[feature_name] = self._gen(feature_name, features_dict)
+                {%- endif %}
             {%- if has_drift %}
-            _{{ feature.name }}_expr = self._get_current_formula("{{ feature.name }}", {{ feature.formula | tojson }})
-            {{ feature.name }} = eval(_{{ feature.name }}_expr)
+            target_value = self._get_val(self.target_name, features_dict)
             {%- else %}
-            {{ feature.name }} = {{ feature.formula }}
+            target_value = self._gen(self.target_name, features_dict)
             {%- endif %}
-            {%- endfor %}
-
-            {%- if has_drift %}
-            _{{ target.name }}_expr = self._get_current_formula("{{ target.name }}", {{ target.formula | tojson }})
-            {%- if target.classtype == 'Binary' %}
-            {{ target.name }} = 1 if eval(_{{ target.name }}_expr) else 0
-            {%- else %}
-            {{ target.name }} = eval(_{{ target.name }}_expr)
-            {%- endif %}
-            {%- else %}
-            {%- if target.classtype == 'Binary' %}
-            {{ target.name }} = 1 if ({{ target.formula }}) else 0
-            {%- else %}
-            {{ target.name }} = {{ target.formula }}
-            {%- endif %}
-            {%- endif %}
-
             self._instance_count += 1
-            yield [{{ features|map(attribute='name')|join(', ') }}], {{ target.name }}
+            yield [features_dict[feature_name] for feature_name in self.feature_names], target_value
 
-    def get_n_instances(self, numinstances):
-        """
-        Generates and returns the number of data instances that is given as a parameter.
-        """
-        return itertools.islice(self, numinstances)
+    def get_n_instances(self, n_instances):
+        return itertools.islice(self, n_instances)
 
 {%- if run_config %}
 
 if __name__ == '__main__':
     import argparse
-    
-    parser = argparse.ArgumentParser(description='{{ name }} - Stream Data Generator')
+    parser = argparse.ArgumentParser(description='{{ name }}')
     {% for arg in run_config.arguments -%}
-    parser.add_argument('--{{ arg.name }}', type=type({{ arg.value }}), default={{ arg.value }}, help='{{ parameters|selectattr("name", "equalto", arg.name)|map(attribute="description")|first|default("Parameter " ~ arg.name) }}')
+    parser.add_argument('--{{ arg.name }}', type=type({{ arg.value }}), default={{ arg.value }})
     {% endfor -%}
-    parser.add_argument('--samples', type=int, default=150, help='Number of samples to generate')
-    
+    parser.add_argument('--samples', type=int, default=150)
     args = parser.parse_args()
-    
-    # Initialize generator with parsed arguments
     gen = {{ name }}({% for arg in run_config.arguments %}{{ arg.name }}=args.{{ arg.name }}{% if not loop.last %}, {% endif %}{% endfor %})
-    
-    # Generate and print samples
     for i, (X, y) in enumerate(gen.get_n_instances(args.samples)):
         print(f"Instance {i}: X={X}, y={y}")
 {%- endif %}

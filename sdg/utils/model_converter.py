@@ -22,10 +22,11 @@ def _generate_categorical_random(categories):
     return f"self._rng.choice([{', '.join(categories)}])"
 
 
-def convert_formula(formulacode):
+def convert_formula(formulacode, feature_names=None):
     """
     Convert a DSL formula string into a valid Python expression.
     Replaces distribution function calls with self._rng calls.
+    Optionally replaces feature names with f['name'] access.
     """
     # Find function calls with nested parentheses support
     formulamatches = regex.finditer(
@@ -59,6 +60,16 @@ def convert_formula(formulacode):
             newformulacode = newformulacode[:matchspan[0]] + \
                 replacement + newformulacode[matchspan[1]:]
 
+    # Replace feature references with dictionary access
+    if feature_names:
+        for name in feature_names:
+            # Match whole word only, not inside quotes
+            newformulacode = regex.sub(
+                rf'\b{name}\b(?!["\'\]])',
+                f"features_dict['{name}']",
+                newformulacode
+            )
+
     return newformulacode
 
 
@@ -85,13 +96,43 @@ def _decode_escapes(text):
         return text
 
 
+def _format_docstring_text(text, base_indent=4):
+    """
+    Format multi-line text for Python docstrings.
+    First line stays at current position, subsequent lines get proper indentation.
+    
+    :param text: The text to format
+    :param base_indent: Number of spaces for base indentation (default: 4)
+    :returns: Formatted text with proper indentation
+    """
+    if not text:
+        return ""
+    
+    lines = text.split('\n')
+    if len(lines) == 1:
+        return text
+    
+    # First line as-is, subsequent lines indented
+    formatted_lines = [lines[0]]
+    indent = ' ' * base_indent
+    
+    for line in lines[1:]:
+        stripped = line.strip()
+        if stripped:
+            formatted_lines.append(indent + stripped)
+        else:
+            formatted_lines.append('')
+    
+    return '\n'.join(formatted_lines)
+
+
 def convert_model_to_dict(model):
     """
     Convert a textX Dataset model into a dictionary compatible with the code generator.
     """
     result = {
         "name": model.name,
-        "description": _decode_escapes(getattr(model, 'description', "")),
+        "description": _format_docstring_text(_decode_escapes(getattr(model, 'description', "")), base_indent=4),
         "parameters": [],
         "features": [],
         "target": {},
@@ -106,9 +147,15 @@ def convert_model_to_dict(model):
             "description": _decode_escapes(getattr(param, 'description', ""))
         })
 
-    # Features
+    # Collect feature names first
+    feature_names = [f.name for f in getattr(model, 'features', [])]
+    target = getattr(model, 'target', None)
+    if target:
+        feature_names.append(target.name)
+
+    # Features - pass feature_names for reference conversion
     for feature in getattr(model, 'features', []):
-        default_formula = convert_formula(getattr(feature, 'formula', ""))
+        default_formula = convert_formula(getattr(feature, 'formula', ""), feature_names)
 
         result["features"].append({
             "name": feature.name,
@@ -118,9 +165,8 @@ def convert_model_to_dict(model):
         })
 
     # Target
-    target = getattr(model, 'target', None)
     if target:
-        default_formula = convert_formula(getattr(target, 'formula', ""))
+        default_formula = convert_formula(getattr(target, 'formula', ""), feature_names)
 
         result["target"] = {
             "name": target.name,
@@ -135,16 +181,12 @@ def convert_model_to_dict(model):
         feature_formulas[feature["name"]] = feature["formula"]
     feature_formulas[result["target"]["name"]] = result["target"]["formula"]
 
-    # Drifts
+    # Drifts - convert scenarios with feature references
     for drift in getattr(model, 'drifts', []):
-        drift_variable = getattr(drift, 'variable', "")
-
-    # Get drift types (list of strings like 'sudden', 'gradual', etc.)
-        drift_types = getattr(drift, 'drift_types', []) or []
-
-        # Get scenarios (list of Formula strings)
+        drift_variable = drift.variable
+        drift_types = drift.drift_types
         raw_scenarios = getattr(drift, 'scenarios', []) or []
-        scenarios = [convert_formula(s) for s in raw_scenarios]
+        scenarios = [convert_formula(s, feature_names) for s in raw_scenarios]
 
         # Include the original/default formula as the first scenario
         default_formula = feature_formulas.get(drift_variable, "")

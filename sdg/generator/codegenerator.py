@@ -1,7 +1,50 @@
 from textx import GeneratorDesc
 import os
+import subprocess
 from jinja2 import Environment, FileSystemLoader
 
+
+def format_with_ruff(code_string):
+    """
+    Format generated Python code using ruff.
+    
+    :param code_string: The Python code to format
+    :returns: Formatted code string
+    """
+    try:
+        # Format with ruff
+        result = subprocess.run(
+            ['ruff', 'format', '-'],
+            input=code_string.encode('utf-8'),
+            capture_output=True,
+            check=True,
+            timeout=10
+        )
+        formatted = result.stdout.decode('utf-8')
+        
+        # Apply auto-fixes with ruff check
+        result = subprocess.run(
+            ['ruff', 'check', '--fix', '--exit-zero', '-'],
+            input=formatted.encode('utf-8'),
+            capture_output=True,
+            timeout=10
+        )
+        
+        if result.returncode == 0 and result.stdout:
+            return result.stdout.decode('utf-8')
+        
+        return formatted
+        
+    except subprocess.CalledProcessError as e:
+        stderr = e.stderr.decode('utf-8') if e.stderr else 'Unknown error'
+        print(f"Warning: ruff formatting failed: {stderr}")
+        return code_string
+    except FileNotFoundError:
+        print("Warning: ruff not found. Install with: pip install ruff")
+        return code_string
+    except subprocess.TimeoutExpired:
+        print("Warning: ruff formatting timed out")
+        return code_string
 
 def prepare_feature_for_template(feature):
     """Prepare feature dictionary for template."""
@@ -44,12 +87,13 @@ def prepare_drifts_for_template(drifts):
     return drift_specs, has_gradual_or_incremental, has_recurring
 
 
-def generate(dataset_dict):
+def generate(dataset_dict, format_code=True):
     """
     Generate Python code using Jinja2 template.
 
     Args:
         dataset_dict: Dictionary representation of the dataset (from model_converter)
+        format_code: Whether to format the generated code with ruff (default: True)
     """
     
     drifts, has_gradual_or_incremental, has_recurring = prepare_drifts_for_template(dataset_dict.get("drifts", []))
@@ -86,7 +130,13 @@ def generate(dataset_dict):
 
     template = env.get_template('generator.py.jinja2')
 
-    return template.render(context)
+    code = template.render(context)
+    
+    # Format code if requested
+    if format_code:
+        code = format_with_ruff(code)
+    
+    return code
 
 
 def sdg_generate(metamodel, model, output_path, overwrite, debug, **custom_args):
@@ -97,8 +147,9 @@ def sdg_generate(metamodel, model, output_path, overwrite, debug, **custom_args)
     from sdg.utils.model_converter import convert_model_to_dict
     dataset_dict = convert_model_to_dict(model)
 
-    # Generate code
-    code = generate(dataset_dict)
+    # Generate code (formatting enabled by default)
+    format_code = custom_args.get('format', True)
+    code = generate(dataset_dict, format_code=format_code)
 
     # Determine output path
     if not output_path:
