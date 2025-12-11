@@ -142,7 +142,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FriedmanDataGenerator")
     parser.add_argument("--seed", type=type(42), default=42)
     parser.add_argument("--samples", type=int, default=150)
+
     args = parser.parse_args()
+
     gen = FriedmanDataGenerator(seed=args.seed)
-    for i, (X, y) in enumerate(gen.get_n_instances(args.samples)):
-        print(f"Instance {i}: X={X}, y={y}")
+
+    for X, y in gen.get_n_instances(args.samples):
+        print(f"Instance {gen._instance_count}: X={X}, y={y}")

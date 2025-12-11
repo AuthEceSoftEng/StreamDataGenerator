@@ -113,70 +113,59 @@ class StaggerDataGenerator:
         raise ValueError(f"Unknown drift scenario: {name}[{scenario_index}]")
 
     def add_drift(
-        self,
-        feature_name,
-        drift_points,
-        drift_type=None,
-        scenario_idx=None,
-        transition_steps=None,
+        self, feature_name, drift_type=None, scenario_idx=None, transition_steps=None
     ):
-        """Configure concept drift for a feature or target variable."""
+        """Apply drift immediately for a feature or target variable.
+
+        Use this method to activate a drift starting at the current instance
+        count (self._instance_count). For 'sudden' and 'recurring' drifts the
+        generator switches to the chosen scenario immediately; for 'gradual'
+        and 'incremental' a transition occurs over `transition_steps` samples.
+        If `scenario_idx` is None, a random non-zero scenario will be selected.
+        For recurring drifts, `interval` and `duration` control periodic activation.
+
+        Parameters
+        ----------
+        feature_name
+            Name of the feature or target to apply drift to.
+        drift_type
+            Type of drift to apply (e.g., 'sudden', 'gradual', 'incremental', 'recurring').
+        scenario_idx
+            Index of the drift scenario to use (None selects random scenario).
+        transition_steps
+            Number of instances over which to transition (for gradual/incremental).
+        interval, duration
+            Interval and duration (for recurring drifts).
+        """
         if feature_name not in self._drift_configs:
             raise ValueError(f"No drift config for '{feature_name}'")
         cfg = self._drift_configs[feature_name]
-        drift_points = [drift_points] if isinstance(drift_points, int) else drift_points
-        drift_types = (
-            [drift_type or "sudden"] * len(drift_points)
-            if not isinstance(drift_type, list)
-            else drift_type
-        )
-        scenario_indices = (
-            [scenario_idx] * len(drift_points)
-            if not isinstance(scenario_idx, list)
-            else scenario_idx
-        )
-
-        for drift_point, drift_type, scenario_index in zip(
-            drift_points, drift_types, scenario_indices
-        ):
-            if cfg["types"] and drift_type not in cfg["types"]:
-                raise ValueError(
-                    f"Drift type '{drift_type}' not allowed for '{feature_name}'"
-                )
-            if scenario_index is not None and (
-                scenario_index < 0 or scenario_index >= cfg["n_scenarios"]
-            ):
-                raise ValueError(f"Invalid scenario index {scenario_index}")
-            drift_state = {
-                "active": False,
-                "drift_point": drift_point,
-                "drift_type": drift_type,
-                "scenario_index_config": scenario_index,
-                "current_scenario_index": 0,
-            }
-            drift_state["transition_steps"] = (
-                transition_steps or self.DEFAULT_TRANSITION_STEPS
+        drift_type = drift_type or "sudden"
+        if cfg["types"] and drift_type not in cfg["types"]:
+            raise ValueError(
+                f"Drift type '{drift_type}' not allowed for '{feature_name}'"
             )
-            drift_state["transition_progress"] = 0
-            self._drift_state[feature_name].append(drift_state)
-        self._drift_state[feature_name].sort(
-            key=lambda drift_state_item: drift_state_item["drift_point"]
+        if scenario_idx is not None and (
+            scenario_idx < 0 or scenario_idx >= cfg["n_scenarios"]
+        ):
+            raise ValueError(f"Invalid scenario index {scenario_idx}")
+        current_scenario_index = (
+            scenario_idx
+            if scenario_idx is not None
+            else self._rng.randint(1, cfg["n_scenarios"] - 1)
         )
-
-    def _check_drifts(self):
-        for feature_name, drift_states in self._drift_state.items():
-            for drift_state in drift_states:
-                if self._instance_count == drift_state["drift_point"]:
-                    drift_state["active"], drift_state["current_scenario_index"] = (
-                        True,
-                        drift_state["scenario_index_config"]
-                        if drift_state["scenario_index_config"] is not None
-                        else self._rng.randint(
-                            1, self._drift_configs[feature_name]["n_scenarios"] - 1
-                        ),
-                    )
-                    if drift_state["drift_type"] in ("gradual", "incremental"):
-                        drift_state["transition_progress"] = 0
+        drift_state = {
+            "active": True,
+            "drift_point": self._instance_count,
+            "drift_type": drift_type,
+            "scenario_index_config": scenario_idx,
+            "current_scenario_index": current_scenario_index,
+        }
+        drift_state["transition_steps"] = (
+            transition_steps or self.DEFAULT_TRANSITION_STEPS
+        )
+        drift_state["transition_progress"] = 0
+        self._drift_state[feature_name].append(drift_state)
 
     def _get_val(self, name, features_dict):
         """Get value considering drift."""
@@ -243,7 +232,6 @@ class StaggerDataGenerator:
 
     def __iter__(self):
         while True:
-            self._check_drifts()
             features_dict = {}
             for feature_name in self.feature_names:
                 features_dict[feature_name] = (
@@ -268,7 +256,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="StaggerDataGenerator")
     parser.add_argument("--seed", type=type(42), default=42)
     parser.add_argument("--samples", type=int, default=150)
+
     args = parser.parse_args()
+
     gen = StaggerDataGenerator(seed=args.seed)
+
     for i, (X, y) in enumerate(gen.get_n_instances(args.samples)):
         print(f"Instance {i}: X={X}, y={y}")

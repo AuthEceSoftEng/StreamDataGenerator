@@ -54,74 +54,36 @@ class Agrawal0DataGenerator:
         self.feature_names = ["salary", "commission", "age", "educationlevel", "car", "zipcode", "housevalue", "houseyears", "loan"]
         self.target_name = "loanapproval"
 
-    def add_drift(self, feature_name, drift_points, drift_type=None, scenario_idx=None):
+    def add_drift(self, feature_name, drift_type=None, scenario_idx=None):
         """
-        Configure drifts for a feature with drift points and parameters.
-        Multiple drift types/points can be provided in one call (parallel arrays).
+        Apply drift immediately for a feature at the current instance count.
         """
         if feature_name not in self._drift_configs:
             raise ValueError(f"No drift configuration for feature '{feature_name}'")
         config = self._drift_configs[feature_name]
 
-        # Normalize points
-        if isinstance(drift_points, int):
-            drift_points = [drift_points]
-        num_points = len(drift_points)
+        drift_type = drift_type or "sudden"
+        if config["drift_types"] and drift_type not in config["drift_types"]:
+            raise ValueError(f"Drift type '{drift_type}' not allowed for '{feature_name}'. Allowed: {config['drift_types']}")
+        if scenario_idx is not None and (scenario_idx < 0 or scenario_idx >= len(config["scenarios"])):
+            raise ValueError(f"Invalid scenario index {scenario_idx} for '{feature_name}'")
 
-        # Normalize drift_type
-        if drift_type is None:
-            drift_types = ["sudden"] * num_points
-        elif isinstance(drift_type, str):
-            drift_types = [drift_type] * num_points
-        elif isinstance(drift_type, list):
-            if len(drift_type) != num_points:
-                raise ValueError(f"drift_type list length ({len(drift_type)}) must match drift_points ({num_points})")
-            drift_types = drift_type
-        else:
-            raise TypeError("drift_type must be string or list")
+        current_scenario_idx = scenario_idx if scenario_idx is not None else (
+            self._rng.randint(1, len(config["scenarios"]) - 1) if len(config["scenarios"]) > 1 else 0
+        )
 
-        # Normalize scenario_idx
-        if scenario_idx is None:
-            scenario_indices = [None] * num_points
-        elif isinstance(scenario_idx, int):
-            scenario_indices = [scenario_idx] * num_points
-        elif isinstance(scenario_idx, list):
-            if len(scenario_idx) != num_points:
-                raise ValueError(f"scenario_idx list length ({len(scenario_idx)}) must match drift_points ({num_points})")
-            scenario_indices = scenario_idx
-        else:
-            raise TypeError("scenario_idx must be int, list, or None")
-
-        for i, (point, dtype, sidx) in enumerate(zip(drift_points, drift_types, scenario_indices)):
-            if config["drift_types"] and dtype not in config["drift_types"]:
-                raise ValueError(f"Drift type '{dtype}' not allowed for '{feature_name}'. Allowed: {config['drift_types']}")
-            if sidx is not None and (sidx < 0 or sidx >= len(config["scenarios"])):
-                raise ValueError(f"Invalid scenario index {sidx} at position {i} for '{feature_name}'")
-
-            new_drift = {
-                "active": False,
-                "drift_point": point,
-                "current_drift_type": dtype,
-                "scenario_idx_config": sidx,
-                "current_scenario_idx": 0,
-            }
-            self._drift_state[feature_name].append(new_drift)
-
-        # Keep drifts ordered by point
-        self._drift_state[feature_name].sort(key=lambda x: x["drift_point"])
+        new_drift = {
+            "active": True,
+            "drift_point": self._instance_count,
+            "current_drift_type": drift_type,
+            "scenario_idx_config": scenario_idx,
+            "current_scenario_idx": current_scenario_idx,
+        }
+        self._drift_state[feature_name].append(new_drift)
 
     def _check_and_apply_drifts(self):
-        """Check if any drift should trigger based on current instance count."""
-        for feature_name, drift_list in self._drift_state.items():
-            config = self._drift_configs[feature_name]
-            for state in drift_list:
-                dtype = state.get("current_drift_type")
-                if not dtype:
-                    continue
-                if self._instance_count == state.get("drift_point"):
-                    self._initialize_drift(feature_name, state, config)
-                else:
-                    self._handle_ongoing_drift(state)
+        """Check drift states (kept for recurring drift support if needed)."""
+        pass
 
     def _initialize_drift(self, feature_name, state, config):
         """Initialize drift when a drift point is hit."""
