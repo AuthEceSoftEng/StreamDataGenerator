@@ -241,7 +241,7 @@ if __name__ == '__main__':
     for X, y in gen.get_n_instances(args.samples):
         print(f"Instance {gen._instance_count}: X={X}, y={y}")
         {%if has_drift %}
-        if gen._instance_count == 100:
+        if gen._instance_count == 140:
             drift_configs = getattr(gen, '_drift_configs', {})
             keys = list(drift_configs.keys())
             if keys:

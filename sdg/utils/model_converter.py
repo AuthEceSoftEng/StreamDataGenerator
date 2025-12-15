@@ -182,20 +182,37 @@ def convert_model_to_dict(model):
     feature_formulas[result["target"]["name"]] = result["target"]["formula"]
 
     # Drifts - convert scenarios with feature references
+    # Group drifts by variable to handle multiple drift blocks for the same variable
+    drifts_by_variable = {}
     for drift in getattr(model, 'drifts', []):
         drift_variable = drift.variable
         drift_types = drift.drift_types
         raw_scenarios = getattr(drift, 'scenarios', []) or []
         scenarios = [convert_formula(s, feature_names) for s in raw_scenarios]
 
-        # Include the original/default formula as the first scenario
-        default_formula = feature_formulas.get(drift_variable, "")
-        if default_formula:
-            scenarios.insert(0, default_formula)
+        if drift_variable not in drifts_by_variable:
+            drifts_by_variable[drift_variable] = {
+                "drift_types": set(),
+                "scenarios": []
+            }
+        
+        # Add drift types (using set to avoid duplicates)
+        drifts_by_variable[drift_variable]["drift_types"].update(drift_types)
+        
+        # Add scenarios
+        drifts_by_variable[drift_variable]["scenarios"].extend(scenarios)
 
+    # Convert to final format
+    for variable, data in drifts_by_variable.items():
+        # Get scenarios and add default formula at the beginning
+        scenarios = data["scenarios"]
+        default_formula = feature_formulas.get(variable, "")
+        if default_formula and default_formula not in scenarios:
+            scenarios.insert(0, default_formula)
+        
         drift_dict = {
-            "variable": drift_variable,
-            "drift_types": drift_types,
+            "variable": variable,
+            "drift_types": list(data["drift_types"]),
             "scenarios": scenarios,
         }
         result["drifts"].append(drift_dict)
