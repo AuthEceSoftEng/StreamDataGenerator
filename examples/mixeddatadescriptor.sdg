@@ -1,0 +1,25 @@
+dataset MixedDataGenerator
+    description: "Mixed data stream generator with abrupt concept drift.\n\nThis generator implements a data stream with abrupt concept drift and boolean noise-free examples as described in Gama et al. (2004).\n\nIt has four relevant attributes: two boolean attributes (v, w) and two numeric attributes (x, y) uniformly distributed from 0 to 1.\n\nClassification function 0 (default):\nif (v and w) or (v and z) or (w and z) then 0 else 1\n\nClassification function 1 (drifted):\nif (v == 1 and w == 1) or (v == 1 and z) or (w == 1 and z) then 1 else 0\n\nwhere z = y < 0.5 + 0.3 * sin(3 * π * x)\n\nConcept drift can be introduced by switching between the two classification functions."
+    parameters
+        seed: "Random seed for reproducibility"
+    end_parameters
+    features
+        bool v: UniformFloat(0, 1) >= 0.5, "Boolean attribute v (0 or 1 with equal probability)"
+        bool w: UniformFloat(0, 1) >= 0.5, "Boolean attribute w (0 or 1 with equal probability)"
+        float x: UniformFloat(0, 1), "Numeric attribute x uniformly distributed from 0 to 1"
+        float y: UniformFloat(0, 1), "Numeric attribute y uniformly distributed from 0 to 1"
+    end_features
+    target classification: Binary
+        description: "Binary classification based on the selected classification function"
+        formula: 0 if (v and w) or (v and (y < 0.5 + 0.3 * math.sin(3 * math.pi * x))) or (w and (y < 0.5 + 0.3 * math.sin(3 * math.pi * x))) else 1
+    end_target
+    drifts
+        drift on classification
+            type: sudden
+            scenarios
+                1 if (v and w) or (v and (y < 0.5 + 0.3 * math.sin(3 * math.pi * x))) or (w and (y < 0.5 + 0.3 * math.sin(3 * math.pi * x))) else 0
+            end_scenarios
+        end_drift
+    end_drifts
+    run seed=42
+end_dataset
