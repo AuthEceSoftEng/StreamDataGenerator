@@ -154,6 +154,7 @@ def sdg_generate(metamodel, model, output_path, overwrite, debug, **custom_args)
     # Determine output path
     if not output_path:
         output_path = f"{dataset_dict['name'].lower()}.py"
+        print(output_path)
 
     # Write to file
     with open(output_path, 'w') as f:

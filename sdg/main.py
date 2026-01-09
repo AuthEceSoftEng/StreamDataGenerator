@@ -1,12 +1,6 @@
-import argparse
 import sys
-import os
-import json
-from pathlib import Path
-
+import argparse
 from sdg.lang import parse_file
-from sdg.utils.model_converter import convert_model_to_dict
-from sdg.tools.convert_yaml import convert_yaml_to_dsl
 
 def validate_command(args):
     """Validate a DSL file."""
@@ -32,22 +26,6 @@ def generate_command(args):
         
     except Exception as e:
         print(f"Generation failed: {e}")
-        sys.exit(1)
-
-def convert_command(args):
-    """Convert YAML to DSL."""
-    try:
-        dsl_content = convert_yaml_to_dsl(args.file)
-        
-        if args.output:
-            with open(args.output, 'w') as f:
-                f.write(dsl_content)
-            print(f"Converted YAML to DSL: {args.output}")
-        else:
-            print(dsl_content)
-            
-    except Exception as e:
-        print(f"❌ Conversion failed: {e}")
         sys.exit(1)
 
 def generate_docs_command(args):
@@ -83,12 +61,7 @@ def main():
     docs_parser = subparsers.add_parser("generate-docs", help="Generate markdown documentation from DSL")
     docs_parser.add_argument("file", help="Path to .sdg file")
     docs_parser.add_argument("-o", "--output", help="Output markdown file path")
-    
-    # Convert command
-    convert_parser = subparsers.add_parser("convert-yaml", help="Convert YAML descriptor to DSL")
-    convert_parser.add_argument("file", help="Path to .yml file")
-    convert_parser.add_argument("-o", "--output", help="Output .sdg file path")
-    
+
     args = parser.parse_args()
     
     if args.command == "validate":
@@ -97,8 +70,6 @@ def main():
         generate_command(args)
     elif args.command == "generate-docs":
         generate_docs_command(args)
-    elif args.command == "convert-yaml":
-        convert_command(args)
     else:
         parser.print_help()
 

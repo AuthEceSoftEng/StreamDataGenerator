@@ -49,19 +49,16 @@ def validate_example(sdg_file):
 
 def generate_code(sdg_file, output_file):
     """Generate Python code from DSL file."""
-    try:
-        start_time = time.time()
-        model = parse_file(sdg_file)
-        dataset_dict = convert_model_to_dict(model)
-        code = generate(dataset_dict)
-        
-        with open(output_file, 'w') as f:
-            f.write(code)
-        
-        generation_time = time.time() - start_time
-        return True, generation_time, None
-    except Exception as e:
-        return False, 0, str(e)
+    start_time = time.time()
+    model = parse_file(sdg_file)
+    dataset_dict = convert_model_to_dict(model)
+    code = generate(dataset_dict)
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(code)
+    
+    generation_time = time.time() - start_time
+    return True, generation_time, None
 
 
 def run_generator(py_file, num_samples=5):
@@ -145,8 +142,8 @@ def main():
             print()
             continue
         
-        # Step 2: Generate code
-        output_file = f"_generated_{sdg_file.stem}.py"
+        # Step 2: Generate code (output_file should be same as sdg_file with py extension)
+        output_file = sdg_file.with_suffix('.py')
         gen_ok, gen_time, error = generate_code(sdg_file, output_file)
         if gen_ok:
             result['generation'] = '✅'
@@ -173,10 +170,10 @@ def main():
             print(f"  ❌ Execution: FAILED - {error}")
         
         # Cleanup generated file
-        try:
-            os.remove(output_file)
-        except:
-            pass
+#        try:
+#            os.remove(output_file)
+#        except:
+#            pass
         
         results.append(result)
         print()

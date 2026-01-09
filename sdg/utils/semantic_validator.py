@@ -15,6 +15,8 @@ class SemanticValidator:
     def __init__(self, model):
         self.model = model
         self.errors = []
+        # Built-in special variables available in formulas (mapped to runtime)
+        self.builtins = {'_instance_count'}
         
     def validate(self):
         """Run all semantic validation checks."""
@@ -57,7 +59,7 @@ class SemanticValidator:
         defined_features = set()
         if self.model.features:
             for feature in self.model.features:
-                allowed = param_names | defined_features
+                allowed = param_names | defined_features | self.builtins
                 free_vars = self._extract_variables(feature.formula)
                 undefined = free_vars - allowed
                 
@@ -69,7 +71,7 @@ class SemanticValidator:
         
         # Check target - can reference params and all features
         if self.model.target:
-            allowed = param_names | defined_features
+            allowed = param_names | defined_features | self.builtins
             free_vars = self._extract_variables(self.model.target.formula)
             undefined = free_vars - allowed
             
@@ -176,7 +178,9 @@ class SemanticValidator:
         excluded = {
             'UniformFloat', 'UniformInteger', 'Gaussian', 'UniformCategorical',
             'if', 'else', 'and', 'or', 'not', 'in', 'is', 'True', 'False', 'None',
-            'math', 'sin', 'cos', 'tan', 'pi', 'e', 'sqrt', 'exp', 'log'
+            'math', 'sin', 'cos', 'tan', 'pi', 'e', 'sqrt', 'exp', 'log',
+            'datetime', 'timedelta', 'weeks', 'days', 'hours', 'minutes',
+            'seconds', 'milliseconds', 'microseconds', 'strftime'
         }
         
         # Match identifiers (alphanumeric + underscore, starting with letter or underscore)

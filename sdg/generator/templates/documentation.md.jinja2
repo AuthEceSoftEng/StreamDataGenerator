@@ -4,19 +4,19 @@
 
 ---
 
-## 📊 Dataset Overview
+## Dataset Overview
 
 - **Name**: `{{ name }}`
 - **Type**: Stream Data Generator
 {% if has_drift %}
-- **Drift Support**: ✅ Yes
+- **Drift Support**: Yes
 {% else %}
-- **Drift Support**: ❌ No
+- **Drift Support**: No
 {% endif %}
 
 ---
 
-## 🔧 Parameters
+## Parameters
 
 {% if parameters %}
 | Parameter | Description |
@@ -30,7 +30,7 @@
 
 ---
 
-## 📈 Features
+## Features
 
 {% if features %}
 | Feature | Type | Description | Formula | Drift |
@@ -64,7 +64,7 @@
 
 ---
 
-## 🎯 Target Variable
+## Target Variable
 
 {% if target %}
 - **Name**: `{{ target.name }}`
@@ -159,7 +159,7 @@ gen.concept_drift()
 
 ---
 
-## 📝 Configuration
+## Configuration
 
 {% if run_config and 'arguments' in run_config %}
 ### Default Run Configuration
@@ -173,7 +173,7 @@ gen.concept_drift()
 
 ---
 
-## 📚 References
+## References
 
 {% if description %}
 See the dataset description above for relevant papers and citations.

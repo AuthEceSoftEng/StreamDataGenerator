@@ -13,7 +13,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "sdg=sdg.cli:main",
+            "sdg=sdg.main:main",
         ],
         "textx_languages": [
             "sdg = sdg.lang:language_desc",

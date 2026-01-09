@@ -262,6 +262,23 @@ generate(n, params) =
 
 ---
 
+## 4.3 Built-in runtime variables
+
+The DSL exposes a small set of built-in runtime variables that may be referenced in feature, target, and drift formulas. These variables represent runtime state maintained by the generated generator and are read-only from the DSL perspective.
+
+- `_instance_count` (integer)
+  - Description: The zero-based index of the current instance being produced by the generator. The first yielded instance has `_instance_count == 0`.
+  - Evaluation timing: When a feature or target formula is evaluated for an instance, `_instance_count` refers to the index of that instance (the generator increments its internal counter after producing the instance).
+  - Runtime mapping: In generated Python code `_instance_count` is mapped to `self._instance_count`.
+  - Example usage:
+
+```
+features:
+    float time_of_day : (_instance_count % 96) / 96
+```
+
+  - Notes: Avoid referencing `_instance_count` inside string literals. The variable is intended for numeric calculations (indexing, periodic patterns, offsets) and is provided for convenience when expressing instance-dependent behavior.
+
 ## 5. Operational Semantics
 
 ### 5.1 Small-Step Semantics

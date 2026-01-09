@@ -70,6 +70,15 @@ def convert_formula(formulacode, feature_names=None):
                 newformulacode
             )
 
+    # Support special built-in variables in formulas (e.g. _instance_count)
+    # Map DSL special names to their runtime representation in generated code
+    special_mappings = {
+        '_instance_count': 'self._instance_count'
+    }
+    for key, val in special_mappings.items():
+        # Replace only whole-word occurrences and avoid replacing inside strings or list accesses
+        newformulacode = regex.sub(rf"\b{regex.escape(key)}\b(?![\"'\]])", val, newformulacode)
+
     return newformulacode
 
 

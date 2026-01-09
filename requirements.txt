@@ -7,3 +7,4 @@ jinja2
 pandas
 regex==2022.9.13
 textX==4.3.0
+ruff

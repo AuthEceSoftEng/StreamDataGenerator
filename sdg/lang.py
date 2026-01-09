@@ -1,6 +1,6 @@
 import os
 from textx import metamodel_from_file, LanguageDesc
-from sdg.tools.semantic_validator import validate_model
+from sdg.utils.semantic_validator import validate_model
 
 def get_metamodel(debug=False, **kwargs):
     """
