@@ -57,8 +57,9 @@ if __name__ == '__main__':
         if df[column].dtype not in ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']:
             if 1.0 * df[column].nunique() / df[column].count() < 0.05:
                 df[column] = df[column].astype('category')
+        # Here one can override numerical columns that are categorical
 
     if output_file.endswith("csv"):
         df.to_csv(output_file, index=False)
     elif output_file.endswith("arff"):
-        arffutils.pandas_dataframe_to_arff(df, output_file, gen.dataset_name, gen.target_name)
+        arffutils.pandas_dataframe_to_arff(df, output_file, gen.dataset_name)
