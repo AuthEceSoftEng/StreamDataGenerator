@@ -68,12 +68,12 @@ class {{ name }}:
         self.target_name = "{{ target.name }}"
 
         {%- if has_drift %}
-        self._drift_configs = {
+        self.drift_configs = {
         {%- for drift in drifts %}
             "{{ drift.variable }}": {"types": {{ drift.drift_types | tojson }}, "n_scenarios": {{ drift.scenarios | length }}},
         {%- endfor %}
         }
-        self._drift_state = {feature_key: [] for feature_key in self._drift_configs}
+        self._drift_state = {feature_key: [] for feature_key in self.drift_configs}
         {%- endif %}
 
     def _gen(self, name, features_dict):
@@ -130,9 +130,9 @@ class {{ name }}:
         interval, duration
             Interval and duration (for recurring drifts).
         """
-        if feature_name not in self._drift_configs:
+        if feature_name not in self.drift_configs:
             raise ValueError(f"No drift config for '{feature_name}'")
-        cfg = self._drift_configs[feature_name]
+        cfg = self.drift_configs[feature_name]
         drift_type = drift_type or "sudden"
         if cfg["types"] and drift_type not in cfg["types"]:
             raise ValueError(f"Drift type '{drift_type}' not allowed for '{feature_name}'")
@@ -199,7 +199,7 @@ class {{ name }}:
         """Return drift configuration and state."""
         return {feature_name: {"types": config["types"], "n_scenarios": config["n_scenarios"], "drifts": [
             {"active": drift_state["active"], "drift_type": drift_state["drift_type"], "scenario_idx": drift_state["current_scenario_index"], "drift_point": drift_state["drift_point"]}
-            for drift_state in self._drift_state[feature_name]]} for feature_name, config in self._drift_configs.items()}
+            for drift_state in self._drift_state[feature_name]]} for feature_name, config in self.drift_configs.items()}
     {%- endif %}
 
     def __iter__(self):
@@ -243,7 +243,7 @@ if __name__ == '__main__':
         print(f"Instance {gen._instance_count}: X={X}, y={y}")
         {%if has_drift %}
         if gen._instance_count == 140:
-            drift_configs = getattr(gen, '_drift_configs', {})
+            drift_configs = getattr(gen, 'drift_configs', {})
             keys = list(drift_configs.keys())
             if keys:
                 var = keys[0]
