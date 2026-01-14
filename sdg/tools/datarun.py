@@ -18,7 +18,6 @@ if __name__ == '__main__':
     gen = DataGenerator(seed = 42)
     print("Using data generator " + gen.dataset_name)
     print("Creating a dataset of " + str(datasize) + " instances")
-    dataset = gen.get_n_instances(datasize)
     if len(conceptdrifts) > 0 and gen.target_name in getattr(gen, 'drift_configs', {}):
         print("    with " + str(len(conceptdrifts)) + " concept drifts")
     datadriftfeatures = [var for var in getattr(gen, 'drift_configs', {}) if var != gen.target_name and var in datadrifts]
