@@ -188,7 +188,8 @@ def convert_model_to_dict(model):
     feature_formulas = {}
     for feature in result["features"]:
         feature_formulas[feature["name"]] = feature["formula"]
-    feature_formulas[result["target"]["name"]] = result["target"]["formula"]
+    if "target" in result and "name" in result["target"]:
+        feature_formulas[result["target"]["name"]] = result["target"]["formula"]
 
     # Drifts - convert scenarios with feature references
     # Group drifts by variable to handle multiple drift blocks for the same variable

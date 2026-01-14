@@ -3,7 +3,7 @@ Dataset:
         ('description:' description=STRING)?
         ('parameters' parameters*=Parameter 'end_parameters')?
         ('features' features*=Feature 'end_features')?
-        'target' target=Target 'end_target'
+        ('target' target=Target 'end_target')?
         ('drifts' drifts*=Drift 'end_drifts')?
     'end_dataset'
 ;

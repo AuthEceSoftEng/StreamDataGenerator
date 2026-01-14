@@ -31,10 +31,14 @@ class {{ name }}:
         {{ feature.description }}
     {%- endfor %}
 
+    {%- if target %}
     Target
     ------
+    {%- if has_gradual_or_incremental %}
     {{ target.name }} : {{ target.classtype|default('numeric') }}
         {{ target.description }}
+    {%- endif %}
+    {%- endif %}
 
     Notes
     -----
@@ -65,7 +69,9 @@ class {{ name }}:
         self._instance_count = 0
         self.dataset_name = "{{ name }}"
         self.feature_names = [{% for feature in features %}"{{ feature.name }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+	    {%- if target %}
         self.target_name = "{{ target.name }}"
+        {%- endif %}
 
         {%- if has_drift %}
         self.drift_configs = {
@@ -214,13 +220,19 @@ class {{ name }}:
                 {%- else %}
                 features_dict[feature_name] = self._gen(feature_name, features_dict)
                 {%- endif %}
+            {%- if target %}
             {%- if has_drift %}
             target_value = self._get_val(self.target_name, features_dict)
             {%- else %}
             target_value = self._gen(self.target_name, features_dict)
             {%- endif %}
+            {%- endif %}
             self._instance_count += 1
+            {%- if target %}
             yield [features_dict[feature_name] for feature_name in self.feature_names], target_value
+            {%- else %}
+            yield [features_dict[feature_name] for feature_name in self.feature_names]
+            {%- endif %}
 
     def get_n_instances(self, n_instances):
         return itertools.islice(self, n_instances)
