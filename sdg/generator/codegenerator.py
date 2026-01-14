@@ -1,49 +1,16 @@
 from textx import GeneratorDesc
 import os
-import subprocess
 from jinja2 import Environment, FileSystemLoader
+from black import format_str, Mode
 
-
-def format_with_ruff(code_string):
-    """
-    Format generated Python code using ruff.
-    
-    :param code_string: The Python code to format
-    :returns: Formatted code string
-    """
+def format_with_black(code_string):
+    """Format generated Python code using Black."""
     try:
-        # Format with ruff
-        result = subprocess.run(
-            ['ruff', 'format', '-'],
-            input=code_string.encode('utf-8'),
-            capture_output=True,
-            check=True,
-            timeout=10
-        )
-        formatted = result.stdout.decode('utf-8')
-        
-        # Apply auto-fixes with ruff check
-        result = subprocess.run(
-            ['ruff', 'check', '--fix', '--exit-zero', '-'],
-            input=formatted.encode('utf-8'),
-            capture_output=True,
-            timeout=10
-        )
-        
-        if result.returncode == 0 and result.stdout:
-            return result.stdout.decode('utf-8')
-        
+        formatted = format_str(code_string, mode=Mode(line_length=100, string_normalization=False))
         return formatted
-        
-    except subprocess.CalledProcessError as e:
-        stderr = e.stderr.decode('utf-8') if e.stderr else 'Unknown error'
-        print(f"Warning: ruff formatting failed: {stderr}")
-        return code_string
-    except FileNotFoundError:
-        print("Warning: ruff not found. Install with: pip install ruff")
-        return code_string
-    except subprocess.TimeoutExpired:
-        print("Warning: ruff formatting timed out")
+    except Exception as e:
+        # In case of any formatting error, return the original code
+        print(f"Formatting failed: {e}")
         return code_string
 
 def prepare_feature_for_template(feature):
@@ -93,7 +60,7 @@ def generate(dataset_dict, format_code=True):
 
     Args:
         dataset_dict: Dictionary representation of the dataset (from model_converter)
-        format_code: Whether to format the generated code with ruff (default: True)
+        format_code: Whether to format the generated code with black (default: True)
     """
     
     drifts, has_gradual_or_incremental, has_recurring = prepare_drifts_for_template(dataset_dict.get("drifts", []))
@@ -105,6 +72,7 @@ def generate(dataset_dict, format_code=True):
         "parameters": dataset_dict["parameters"],
         "features": dataset_dict["features"],
         "target": dataset_dict["target"],
+        "has_target": bool(dataset_dict["target"]),
         "drifts": drifts,
         "has_drift": bool(drifts),
         "has_gradual_or_incremental": has_gradual_or_incremental,
@@ -126,7 +94,7 @@ def generate(dataset_dict, format_code=True):
     
     # Format code if requested
     if format_code:
-        code = format_with_ruff(code)
+        code = format_with_black(code)
     
     return code
 

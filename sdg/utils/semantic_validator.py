@@ -22,7 +22,6 @@ class SemanticValidator:
         """Run all semantic validation checks."""
         self.check_variable_scoping()
         self.check_drift_consistency()
-        self.check_parameter_usage()
         
         if self.errors:
             raise TextXSemanticError('\n'.join(self.errors))
