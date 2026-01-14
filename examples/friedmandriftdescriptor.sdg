@@ -36,5 +36,4 @@ dataset FriedmanDataGenerator
             end_scenarios
         end_drift
     end_drifts
-    run seed=42
 end_dataset
