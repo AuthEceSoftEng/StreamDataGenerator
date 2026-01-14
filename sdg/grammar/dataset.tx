@@ -5,7 +5,6 @@ Dataset:
         ('features' features*=Feature 'end_features')?
         'target' target=Target 'end_target'
         ('drifts' drifts*=Drift 'end_drifts')?
-        ('run' run_config=RunConfig)?
     'end_dataset'
 ;
 

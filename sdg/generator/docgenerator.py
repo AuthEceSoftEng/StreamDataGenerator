@@ -56,8 +56,7 @@ def generate_documentation(dataset_dict, model=None):
         'description': dataset_dict.get('description', ''),
         'parameters': dataset_dict.get('parameters', []),
         'features': dataset_dict.get('features', []),
-        'target': dataset_dict.get('target', {}),
-        'run_config': dataset_dict.get('run', {})
+        'target': dataset_dict.get('target', {})
     }
     
     # Check for drift

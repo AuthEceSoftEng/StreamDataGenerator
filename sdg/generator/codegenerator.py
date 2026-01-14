@@ -111,14 +111,6 @@ def generate(dataset_dict, format_code=True):
         "has_recurring": has_recurring,
     }
 
-    if "run" in dataset_dict and "arguments" in dataset_dict["run"]:
-        context["run_config"] = dataset_dict["run"]
-        # Pre-format arguments for run config to avoid complex template logic
-        run_args = []
-        for arg in dataset_dict["run"]["arguments"]:
-            run_args.append(f"{arg['name']}={arg['value']}")
-        context["run_args_str"] = ", ".join(run_args)
-
     # Load template
     current_dir = os.path.dirname(os.path.abspath(__file__))
     template_dir = os.path.join(current_dir, 'templates')

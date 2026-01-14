@@ -139,25 +139,6 @@ class SemanticValidator:
                 if target and getattr(target, 'classtype', 'numeric') == 'Binary':
                     self.errors.append(f"Drift on '{var}': incremental drift cannot be applied to binary targets")
 
-    def check_parameter_usage(self):
-        """Verify all defined parameters are used in run config."""
-        if not self.model.parameters or not self.model.run_config:
-            return
-        
-        param_names = {p.name for p in self.model.parameters}
-        run_args = {arg.name for arg in self.model.run_config.arguments} if self.model.run_config.arguments else set()
-        
-        missing = param_names - run_args
-        if missing:
-            # This is a warning, not an error
-            print(f"Warning: Parameters {missing} are defined but not provided in run config")
-        
-        extra = run_args - param_names
-        if extra:
-            self.errors.append(
-                f"Run config contains undefined parameters: {extra}"
-            )
-    
     def _extract_variables(self, formula):
         """
         Extract variable names from a formula.

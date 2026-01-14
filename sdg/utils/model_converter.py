@@ -226,15 +226,4 @@ def convert_model_to_dict(model):
         }
         result["drifts"].append(drift_dict)
 
-    # Run config
-    run_config = getattr(model, 'run_config', None)
-    if run_config:
-        args = []
-        for arg in getattr(run_config, 'arguments', []):
-            args.append({
-                "name": arg.name,
-                "value": arg.value
-            })
-        result["run"] = {"arguments": args}
-
     return result

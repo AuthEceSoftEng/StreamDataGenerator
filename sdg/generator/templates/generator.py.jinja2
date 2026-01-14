@@ -224,35 +224,3 @@ class {{ name }}:
 
     def get_n_instances(self, n_instances):
         return itertools.islice(self, n_instances)
-
-{%- if run_config %}
-
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='{{ name }}')
-    {% for arg in run_config.arguments -%}
-    parser.add_argument('--{{ arg.name }}', type=type({{ arg.value }}), default={{ arg.value }})
-    {% endfor -%}
-    parser.add_argument('--samples', type=int, default=150)
-
-    args = parser.parse_args()
-
-    gen = {{ name }}({% for arg in run_config.arguments %}{{ arg.name }}=args.{{ arg.name }}{% if not loop.last %}, {% endif %}{% endfor %})
-
-    for X, y in gen.get_n_instances(args.samples):
-        print(f"Instance {gen._instance_count}: X={X}, y={y}")
-        {%if has_drift %}
-        if gen._instance_count == 140:
-            drift_configs = getattr(gen, 'drift_configs', {})
-            keys = list(drift_configs.keys())
-            if keys:
-                var = keys[0]
-                cfg = drift_configs[var]
-                types = cfg.get("types") if isinstance(cfg, dict) else None
-                if types:
-                    first_type = types[0] if len(types) else None
-                    if first_type:
-                        gen.add_drift(var, drift_type=first_type)
-                        print(f"Added {first_type} drift on {var}")
-        {%- endif %}
-{%- endif %}
