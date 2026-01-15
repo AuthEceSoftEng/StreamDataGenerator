@@ -43,7 +43,17 @@ dataset LoanDataGenerator
         description: "Loan Approval"
         formula: salary > 40000 and age <= 40
     end_target
-    
+
+    drifts
+        drift on salary
+            type: sudden
+            scenarios
+                UniformFloat(10000, 40000),
+                UniformFloat(30000, 80000)
+            end_scenarios
+        end_drift
+    end_drifts
+
 end_dataset
 ```
 
@@ -96,9 +106,17 @@ end_target
 ```
 
 #### Drift
-Define drifts by specifying alternative formulas for a feature or target.
+Define concept or data drifts by specifying alternative formulas for a feature or target.
+Supported drift types include:
+- `sudden`: rapid shift where a new concept replaces the old
+- `gradual`: slow transition where old and new concepts temporarily coexist
+- `incremental`: small continuous changes that accumulate into a significant shift
+- `recurring`: concepts reappear periodically with seasonal patterns
+
+Drift grammar example:
 ```text
 drift on age
+    type: sudden, gradual
     scenarios
         default: original_formula
         alternative: new_formula_after_drift
@@ -131,15 +149,18 @@ Alternatively, since the language is registered with textX, you can use standard
 Upon verifying that `sdg` is registered (using `textx list-languages` and `textx list-generators`),
 you can use the registered `sdg_gen` generator (e.g. `textx generate datasetname.sdg --target sdg_gen`).
 
-## Examples
-Check the `examples/` directory for sample `.sdg` files:
+## 📂 Examples
 
-- `agrawal0datadescriptor.sdg`
-- `friedmandatadescriptor.sdg`
-- `loandatadescriptor.sdg`
+Check the `examples/` directory for sample `.sdg` files (short description):
+
+- `agrawal0datadescriptor.sdg` — classification generator with threshold-based rules.
+- `friedmandatadescriptor.sdg` — nonlinear regression generator using sinusoidal interactions.
+- `friedmandriftdescriptor.sdg` — Friedman regression with multiple concept drifts.
+- `loandatadescriptor.sdg` — loan approval rules with financial thresholds.
+- `mixeddatadescriptor.sdg` — mixed boolean/numeric data with abrupt drift.
+- `mvdatadescriptor.sdg` — multivariate dataset with conditional dependencies.
+- `staggerdatadescriptor.sdg` — boolean stagger concept (size/shape/color).
 
 ## Semantic specification
 See file `OPERATIONAL_SEMANTICS.md` for the formal semantics of the DSL, 
 including syntax overview, evaluation model, and logic formalization.
-
-
