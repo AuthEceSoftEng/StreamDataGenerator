@@ -97,7 +97,7 @@ Supported functions are:
 
 #### Target
 Define the target variable (label) for supervised learning tasks.
-You must specify the type (`Binary`, `Float`, `Integer`, `Categorical`, `Scalar`).
+You must specify the type (`Binary`, `Categorical`, `Scalar`).
 ```text
 target churn: Binary
     description: "Customer Churn"

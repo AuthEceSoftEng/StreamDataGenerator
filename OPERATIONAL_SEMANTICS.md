@@ -3,12 +3,15 @@ This is a single, compact, authoritative reference for implementers and readers,
 which must be kept up to date when the language or generator behavior changes.
 
 ## Syntax at a glance
-- dataset NAME ... `end_dataset`
-- parameters: `parameters ... end_parameters` (key: description)
-- features: `type name: formula[, "Description"]` ... `end_features` (types: `int`, `float`, `string`, `bool`)
-- target: `target name:ClassType` then `description:` / `formula:` ... `end_target` (ClassType is an identifier; common values: `Binary`, `Float`, `Integer`, `Categorical`, `Scalar`)
-- drifts: `drifts` ... `end_drifts` with `drift on <variable>` ... `end_drift`
-- distributions: `UniformFloat(a,b)`, `UniformInteger(a,b)`, `Gaussian(mu,sigma)`, `UniformCategorical(v1,...)`
+- Dataset definition: `dataset <name>` ... `end_dataset`
+- Parameters: `parameters` ... `end_parameters` --> `key: "description"`
+- Features: `features` ... `end_features` --> `[type] name: formula[, "desc"]` (type can be: `int`, `float`, `string`, `bool`)
+- Target: `target <name>: <ClassType>` ... `end_target` --> description and formula (ClassType can be: `Binary`, `Categorical`, `Scalar`)
+- Drifts: `drifts` ... `end_drifts` --> drift section with:
+  - Drift: `drift on <variable>` ... `end_drift` --> drift definition (drift type can be `sudden`, `gradual`, `incremental`, `recurring`), with:
+    - Scenarios: `scenarios` ... `end_scenarios` --> drift condition formulas
+
+Valid formulas include python expressions (possibly referencing parameters and previously defined features) and calls to supported distributions: `UniformFloat(a,b)`, `UniformInteger(a,b)`, `Gaussian(mu,sigma)`, `UniformCategorical(v1,...)`.
 
 ## Evaluation model
 - Per instance: evaluate features in declaration order; each result stored in `features_dict`.
