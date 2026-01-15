@@ -1,94 +1,50 @@
-# 🚀 Stream Data Generator DSL
+# Stream Data Generator DSL
+SDG is a formal **Domain-Specific Language (DSL)** for describing stream dataset generators,
+built using the [textX](https://textx.github.io/textX/) framework. This DSL provides a clean
+and structured way to define data streams, including different feature (and target) variables
+as well as drifts (data and concept).
 
-A formal **Domain-Specific Language (DSL)** for describing stream dataset generators, built using the [textX](https://textx.github.io/textX/) framework.
-
-This DSL provides a clean, structured, and type-safe way to define data streams, features, concept drift, and generation logic, replacing verbose YAML configurations.
-
----
-
-## 📋 Table of Contents
-
-- [🚀 Stream Data Generator DSL](#-stream-data-generator-dsl)
-  - [📋 Table of Contents](#-table-of-contents)
-  - [✨ Features](#-features)
-  - [🛠️ Installation](#️-installation)
-  - [📝 DSL Syntax](#-dsl-syntax)
-    - [Example](#example)
-    - [Language Constructs](#language-constructs)
-      - [Dataset](#dataset)
-      - [Parameters](#parameters)
-      - [Features](#features)
-      - [Data Types](#data-types)
-      - [Target](#target)
-      - [Drift](#drift)
-      - [Run Configuration](#run-configuration)
-    - [Supported Functions](#supported-functions)
-  - [💻 Usage](#-usage)
-    - [Using the `sdg` CLI](#using-the-sdg-cli)
-      - [✅ 1. Validate a DSL file](#-1-validate-a-dsl-file)
-      - [⚙️ 2. Generate Python Code](#️-2-generate-python-code)
-      - [🔄 3. Convert YAML to DSL](#-3-convert-yaml-to-dsl)
-    - [Using the `textx` CLI](#using-the-textx-cli)
-      - [📜 List Registered Languages and Generators](#-list-registered-languages-and-generators)
-      - [🏭 Generate Code](#-generate-code)
-  - [📂 Examples](#-examples)
-
----
-
-## ✨ Features
-
+The main features of SDG are:
 - **Formal Grammar**: Robust syntax validation and error reporting.
-- **Concise Syntax**: Write less code to describe complex datasets compared to YAML.
+- **Concise Syntax**: Write less code to describe complex datasets.
 - **Type Safety**: Built-in validation for parameter types and formulas.
 - **Code Generation**: Automatically generate Python code for data generation.
 - **Tooling Support**: Integrated with the textX ecosystem (CLI, visualization).
-- **Drift Support**: Native syntax for defining concept drift and formula variations.
+- **Drift Support**: Native syntax for defining data and concept drifts (using formula variations).
 
----
-
-## 🛠️ Installation
-
-Clone the repository and install the package in **editable mode**. This ensures all dependencies (including `textX` and `jinja2`) are installed correctly.
+## Installation
+Clone the repository and install the package in **editable mode**. This ensures all dependencies
+(including `textX` and `jinja2`) are installed correctly, while the installation also includes the
+`textX[cli]` extras, enabling the standard `textx` command-line tools.
 
 ```bash
 pip install -e .
 ```
 
-> **Note**: This installation includes the `textX[cli]` extras, enabling the standard `textx` command-line tools.
-
----
-
-## 📝 DSL Syntax
-
-The DSL is designed to be readable and expressive. Blocks are terminated with the `end` keyword.
+## DSL Syntax
+The DSL is designed to be readable and expressive. Blocks use explicit end markers.
 
 ### Example
-
 ```text
-dataset Agrawal0DataGenerator
-    description: "Stream generator introduced by Agrawal et al."
+dataset LoanDataGenerator
+
+    description: "Stream generator producing loan data"
     
     parameters
         seed: "The seed of the random generator"
-    end
+    end_parameters
     
     features
-        float salary: UniformFloat(20000, 150000), "Salary"
-        int age: UniformInteger(20, 80), "Age"
-        float commission: 0 if salary < 75000 else UniformFloat(10000, 75000), "Commission"
-    end
+        float salary: UniformFloat(20000, 150000), "Salary of the applicant"
+        int age: UniformInteger(20, 80), "Age of the applicant"
+    end_features
     
     target loanapproval:Binary
         description: "Loan Approval"
-        formula: age < 40 or 60 <= age
-        drift changeformula
-            default: age < 40 or 60 <= age
-            alternative: (age < 40 and salary >= 50000) or (age >= 60)
-        end
-    end
+        formula: salary > 40000 and age <= 40
+    end_target
     
-    run seed=42
-end
+end_dataset
 ```
 
 ### Language Constructs
@@ -98,7 +54,7 @@ The top-level container for your generator definition.
 ```text
 dataset MyGenerator
     ...
-end
+end_dataset
 ```
 
 #### Parameters
@@ -107,128 +63,83 @@ Define input arguments that can be passed to the generator at runtime.
 parameters
     seed: "Random seed"
     noise: "Noise level"
-end
+end_parameters
 ```
 
 #### Features
 Define the input features (attributes) of the data stream.
 Syntax: `[Type] name: formula[, "Description"]`
-
 ```text
 features
     int age: UniformInteger(18, 90), "User Age"
     float income: Gaussian(50000, 10000), "Annual Income"
     string status: UniformCategorical("active", "inactive"), "Status"
-end
+end_features
 ```
 
-#### Data Types
-Supported types for features:
-- `int` - Integer values
-- `float` - Floating-point values
-- `string` - String values
-- `bool` - Boolean values
-- `object` - Generic object type
+Supported types for features are `int`, `float`, `string`, `bool`.
+
+Supported functions are:
+- `UniformFloat(min, max)`: Continuous uniform float between min and max
+- `UniformInteger(min, max)`: Discrete uniform integer between min and max
+- `Gaussian(mu, sigma)`: Normal distribution with mean and deviation
+- `UniformCategorical("val1", "val2", ...)`: Uniform random choice among categorical values
 
 #### Target
-Define the target variable (label) for supervised learning tasks. You must specify the type (`Binary`, `Float`, `Integer`, `Categorical`).
+Define the target variable (label) for supervised learning tasks.
+You must specify the type (`Binary`, `Float`, `Integer`, `Categorical`, `Scalar`).
 ```text
-target churn:Binary
+target churn: Binary
     description: "Customer Churn"
     formula: age > 60 and income < 30000
-end
+end_target
 ```
 
 #### Drift
-Define concept drift by specifying alternative formulas for a feature or target.
+Define drifts by specifying alternative formulas for a feature or target.
 ```text
-drift changeformula
-    default: original_formula
-    alternative: new_formula_after_drift
-end
+drift on age
+    scenarios
+        default: original_formula
+        alternative: new_formula_after_drift
+    end_scenarios
+end_drift
 ```
 
-#### Run Configuration
-Specify default values for parameters when running the generator.
-```text
-run seed=42, noise=0.1
-```
-
-### Supported Functions
-
-- `UniformFloat(min, max)`
-- `UniformInteger(min, max)`
-- `Gaussian(mu, sigma)`
-- `UniformCategorical("val1", "val2", ...)`
-
----
-
-## 💻 Usage
-
-You can interact with the DSL using either the dedicated `sdg` CLI or the standard `textx` CLI.
-
-### Using the `sdg` CLI
-
+## Usage
 The package provides a convenient `sdg` command for common tasks.
 
-#### ✅ 1. Validate a DSL file
-
-Check if your `.sdg` file is syntactically and semantically correct.
+You can check if your `.sdg` file is syntactically and semantically correct, using the command:
 
 ```bash
 sdg validate examples/dataset.sdg
 ```
 
-#### ⚙️ 2. Generate Python Code
-
-Generate the Python generator class from your DSL description.
+To generate the Python generator class from your DSL description, you can use the command:
 
 ```bash
-sdg generate examples/dataset.sdg
+sdg generate datasetname.sdg
 ```
-*By default, this creates `datasetname.py` in the current directory.*
-
-You can specify a custom output file:
+By default, this creates `datasetname.py` in the current directory.
+You can specify a custom output file as:
 
 ```bash
-sdg generate examples/dataset.sdg -o my_generator.py
+sdg generate datasetname.sdg -o my_generator.py
 ```
 
-#### 🔄 3. Convert YAML to DSL
+Alternatively, since the language is registered with textX, you can use standard textX commands.
+Upon verifying that `sdg` is registered (using `textx list-languages` and `textx list-generators`),
+you can use the registered `sdg_gen` generator (e.g. `textx generate datasetname.sdg --target sdg_gen`).
 
-Migrate your existing YAML descriptors to the new DSL format.
-
-```bash
-sdg convert-yaml examples/dataset.yml -o examples/dataset.sdg
-```
-
-### Using the `textx` CLI
-
-Since the language is registered with textX, you can use standard textX commands.
-
-#### 📜 List Registered Languages and Generators
-
-Verify that `sdg` is registered.
-
-```bash
-textx list-languages
-textx list-generators
-```
-
-#### 🏭 Generate Code
-
-Use the registered `sdg_gen` generator.
-
-```bash
-textx generate examples/dataset.sdg --target sdg_gen
-```
-
----
-
-## 📂 Examples
-
+## Examples
 Check the `examples/` directory for sample `.sdg` files:
 
 - `agrawal0datadescriptor.sdg`
 - `friedmandatadescriptor.sdg`
 - `loandatadescriptor.sdg`
+
+## Semantic specification
+See file `OPERATIONAL_SEMANTICS.md` for the formal semantics of the DSL, 
+including syntax overview, evaluation model, and logic formalization.
+
+
