@@ -20,7 +20,7 @@ dataset Agrawal0DataGenerator
     end_target
     drifts
         drift on loanapproval
-            type: sudden,
+            type: sudden
             scenarios
                 (age < 40 and 50000 <= salary and salary <= 100000) or (age < 60 and 75000 <= salary and salary <= 125000) or (25000 <= salary and salary <= 75000)
             end_scenarios

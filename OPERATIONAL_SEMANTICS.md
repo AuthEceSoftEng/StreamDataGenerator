@@ -1,7 +1,6 @@
 # Operational Semantics
-
 This is a single, compact, authoritative reference for implementers and readers,
-kept up to date when the language or generator behavior changes.
+which must be kept up to date when the language or generator behavior changes.
 
 ## Syntax at a glance
 - dataset NAME ... `end_dataset`
@@ -11,15 +10,14 @@ kept up to date when the language or generator behavior changes.
 - drifts: `drifts` ... `end_drifts` with `drift on <variable>` ... `end_drift`
 - distributions: `UniformFloat(a,b)`, `UniformInteger(a,b)`, `Gaussian(mu,sigma)`, `UniformCategorical(v1,...)`
 
-## Evaluation model (what to expect)
+## Evaluation model
 - Per instance: evaluate features in declaration order; each result stored in `features_dict`.
 - After all features, evaluate target using `features_dict`.
 - Binary target → `1 if (boolean_expr) else 0`.
 - Drifts: each driftable variable has scenario indices; scenario 0 = default. Generator activates scenarios per drift type.
 - `_instance_count` is incremented after producing an instance (zero-based).
 
-## Logic (brief formalization)
-
+## Formal specification
 1) Abstract syntax
 - Let I be identifiers, E be Python-compatible expressions (formulas), V primitive values.
 - Dataset D ::= ⟨id, Desc?, P*, F*, T?, Δ*⟩
@@ -75,8 +73,7 @@ kept up to date when the language or generator behavior changes.
 - Scenario safety: requested scenario indices j must satisfy 0 ≤ j < len(Φ_x).
 - Type soundness: value returned by V must be compatible with declared feature type τ.
 
-## Minimal example (intent)
-
+## Minimal example
 DSL:
 ```
 dataset LoanGen
@@ -105,6 +102,3 @@ features_dict['salary'] = self._rng.uniform(20000, 150000)
 # target `approved:Binary` -> binary mapping
 return 1 if (features_dict['age'] < 25 and features_dict['salary'] >= 50000) else 0
 ```
-
-Change log
-- 2026-01-15: Aligned cheat-sheet with grammar and examples; kept concise.

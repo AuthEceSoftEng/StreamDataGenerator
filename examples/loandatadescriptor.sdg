@@ -19,14 +19,14 @@ dataset LoanDatasetStreamGenerator
     end_target
     drifts
         drift on salary
-            type: sudden,
+            type: sudden
             scenarios
                 UniformFloat(10000, 40000),
                 UniformFloat(30000, 80000)
             end_scenarios
         end_drift
         drift on loanapproval
-            type: sudden,
+            type: sudden
             scenarios
                 (loan <= 10 * salary) and (loan <= 0.5 * housevalue) and ((age < 20 and salary >= 30000) or (age < 40 and salary >= 40000) or (age < 60 and salary >= 50000)),
                 (loan <= 50 * salary + commission) and (loan <= 0.9 * housevalue) and ((age < 20 and salary + commission >= 10000) or (age < 40 and salary + commission >= 15000) or (age < 60 and salary + commission >= 20000))

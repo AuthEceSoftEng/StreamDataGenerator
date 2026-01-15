@@ -16,7 +16,7 @@ dataset FriedmanDataGenerator
         float x10: UniformFloat(0, 1), "The tenth variable"
         float noise: Gaussian(0, 1), "Noise of the target"
     end_features
-    target y:Scalar
+    target y: Scalar
         description: "The target variable defined as a function of the features"
         formula: 10 * math.sin(math.pi * x1 * x2) + 20 * (x3 - 0.5) ** 2 + 10 * x4 + 5 * x5 + noise
     end_target
