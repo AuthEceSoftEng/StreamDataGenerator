@@ -1,0 +1,5 @@
+I want a dataset that simulates vehicle behavior in a city with changing traffic conditions. It
+should include several features describing the vehicle, the environment, and the traffic flow, but I
+don’t want to specify exact distributions. The target should represent whether the vehicle reaches its
+destination on time. There should be some kind of drift reflecting how traffic patterns change during rush
+hours or after road incidents. 

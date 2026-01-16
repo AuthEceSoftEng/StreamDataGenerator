@@ -1,0 +1,39 @@
+dataset SmartBuildingMonitoring
+    description: "A data stream generator for monitoring environmental conditions in a smart-building system."
+    
+    parameters
+        seed: "The seed of the random generator"
+    end_parameters
+    
+    features
+        float temperature: UniformFloat(0, 20), "Temperature in degrees Celsius"
+        float humidity: Gaussian(10, 2.5), "Relative humidity as a percentage"
+        float light_intensity: UniformFloat(100, 1000), "Light intensity in lux"
+        int co2_level: UniformInteger(400, 1000), "CO2 level in parts per million (ppm)"
+        string room_type: UniformCategorical("office", "meeting_room", "corridor", "lobby"), "The type of the room"
+        string ventilation_mode: UniformCategorical("off", "low", "high"), "The current mode of the ventilation system"
+    end_features
+    
+    target comfort_state: Binary
+        description: "Indicates if the environment is in a comfortable state"
+        formula: (temperature > 15 and temperature < 20) and (humidity < 15) and (light_intensity > 200)
+    end_target
+    
+    drifts
+        drift on temperature
+            type: gradual, sudden
+            scenarios
+                UniformFloat(10, 30),
+                UniformFloat(-5, 15)
+            end_scenarios
+        end_drift
+        drift on humidity
+            type: gradual, sudden
+            scenarios
+                Gaussian(15, 3.0),
+                Gaussian(5, 2.0)
+            end_scenarios
+        end_drift
+    end_drifts
+    
+end_dataset

@@ -1,0 +1,34 @@
+dataset CustomerActivityStream
+    description: "A simple data stream generator for customer activity on an online retail platform."
+    
+    parameters
+        seed: "The seed of the random generator"
+    end_parameters
+    
+    features
+        int age: UniformInteger(18, 70), "The age of the customer"
+        float session_time: Gaussian(20, 8), "The duration of the customer's session in minutes"
+        string device_type: UniformCategorical("mobile", "desktop", "tablet"), "The type of device used by the customer"
+    end_features
+    
+    target purchase: Binary
+        description: "Indicates if the customer made a purchase during the session"
+        formula: session_time > 15 and age < 60
+    end_target
+    
+    drifts
+        drift on session_time
+            type: sudden
+            scenarios
+                Gaussian(35, 10)
+            end_scenarios
+        end_drift
+        drift on purchase
+            type: sudden
+            scenarios
+                session_time > 20 and age < 55
+            end_scenarios
+        end_drift
+    end_drifts
+    
+end_dataset

@@ -1,0 +1,10 @@
+I want a very simple data stream generator about customer activity on an online retail platform.
+It should include three features: age as an integer uniformly sampled between 18 and 70, session_time
+as a float drawn from a Gaussian distribution with mean 20 and standard deviation 8, and device_type
+as a categorical value chosen uniformly from mobile, desktop, or tablet. The target variable is
+purchase, which is true when session_time is greater than 15 and age is below 60. I want two sudden drifts.
+The first drift affects session_time, where after the drift the distribution changes from Gaussian(20,
+8) to Gaussian(35, 10) to represent increased engagement after a platform redesign. The second drift
+affects purchase, where after the drift the rule becomes slightly stricter (indicating e.g. external
+market economic recession) so that a purchase only happens when session_time is greater than 20 and age
+is below 55.
