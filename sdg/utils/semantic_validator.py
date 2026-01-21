@@ -23,6 +23,7 @@ class SemanticValidator:
         self.check_variable_scoping()
         self.check_drift_consistency()
         self.check_type_consistency()
+        self.check_distribution_parameters()
 
         if self.errors:
             raise TextXSemanticError('\n'.join(self.errors))
@@ -204,6 +205,68 @@ class SemanticValidator:
                         self.errors.append(
                             f"Drift on '{var}': scenario type mismatch. Variable is '{expected_type}', but scenario '{scenario}' returns '{scn_type}'"
                         )
+
+    def check_distribution_parameters(self):
+        """Validate distribution function parameters in all formulas."""
+        # Collect all formulas with their context for error reporting
+        formula_contexts = []
+
+        if self.model.features:
+            for feature in self.model.features:
+                if feature.formula:
+                    formula_contexts.append(
+                        (feature.formula, f"Feature '{feature.name}'"))
+
+        if self.model.target and self.model.target.formula:
+            formula_contexts.append(
+                (self.model.target.formula, f"Target '{self.model.target.name}'"))
+
+        for drift in getattr(self.model, 'drifts', []):
+            for i, scenario in enumerate(getattr(drift, 'scenarios', [])):
+                if scenario:
+                    formula_contexts.append(
+                        (scenario, f"Drift on '{drift.variable}' scenario {i+1}"))
+
+        # Validate each formula
+        for formula, context in formula_contexts:
+            self._validate_distribution_calls(formula, context)
+
+    def _validate_distribution_calls(self, formula, context):
+        """Extract and validate distribution calls from a formula."""
+        # Pattern for UniformFloat(min, max) and UniformInteger(min, max)
+        uniform_pattern = r'(UniformFloat|UniformInteger)\s*\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)'
+        for match in re.finditer(uniform_pattern, formula):
+            func_name = match.group(1)
+            try:
+                min_val = float(match.group(2))
+                max_val = float(match.group(3))
+                if min_val > max_val:
+                    self.errors.append(
+                        f"{context}: {func_name}({match.group(2)}, {match.group(3)}) has min > max"
+                    )
+            except ValueError:
+                pass  # Skip if not literal numbers
+
+        # Pattern for Gaussian(mean, sigma)
+        gaussian_pattern = r'Gaussian\s*\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)'
+        for match in re.finditer(gaussian_pattern, formula):
+            try:
+                sigma = float(match.group(2))
+                if sigma <= 0:
+                    self.errors.append(
+                        f"{context}: Gaussian({match.group(1)}, {match.group(2)}) has sigma <= 0"
+                    )
+            except ValueError:
+                pass  # Skip if not literal numbers
+
+        # Pattern for UniformCategorical(...) - check at least one value
+        categorical_pattern = r'UniformCategorical\s*\(([^)]*)\)'
+        for match in re.finditer(categorical_pattern, formula):
+            args = match.group(1).strip()
+            if not args:
+                self.errors.append(
+                    f"{context}: UniformCategorical() requires at least one value"
+                )
 
     def _is_compatible(self, declared, inferred):
         if declared == inferred:
