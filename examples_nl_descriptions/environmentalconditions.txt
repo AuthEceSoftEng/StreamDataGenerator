@@ -1,0 +1,8 @@
+I want a data stream generator for monitoring environmental conditions in a smart‑building system.
+It should include around six different features. For example, temperature should be a value somewhere
+between 0 and 20 degrees, humidity should be drawn from some distribution with a mean roughly around 10,
+and light_intensity should vary within a reasonable indoor range. I also want a couple of categorical
+attributes such as room_type and ventilation_mode, chosen from a small set of typical building categories.
+The target variable should indicate whether the building is in a “comfort” state, based on a loose
+rule combining temperature, humidity, and light levels. Include at least one drift that affects
+temperature and humidity together, representing seasonal changes or HVAC adjustments. 

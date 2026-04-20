@@ -1,0 +1,24 @@
+dataset StaggerDataGenerator
+    description: "Stream generator producing three boolean features describing objects:\n size, shape and colour. Dataset originally introduced in:\n Schlimmer, J. C., & Granger, R. H. (1986). Incremental learning from.\n noisy data. Machine learning, 1(3), 317-354."
+    parameters
+        seed: "The seed of the random generator"
+    end_parameters
+    features
+        string size: UniformCategorical("small", "medium", "large"), "The size of the object, one of small, medium, large"
+        string shape: UniformCategorical("circle", "square", "triangle"), "The shape of the object, one of circle, square, triangle"
+        string color: UniformCategorical("red", "blue", "green"), "The color of the object, one of red, blue, green"
+    end_features
+    target y: Binary
+        description: "The target variable defined as a function of the features"
+        formula: size == "small" and color == "red"
+    end_target
+    drifts
+        drift on y
+            type: sudden, gradual
+            scenarios
+                color == "green" or shape == "circle",
+                size == "medium" or size == "large"
+            end_scenarios
+        end_drift
+    end_drifts
+end_dataset

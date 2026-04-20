@@ -1,0 +1,170 @@
+# {{ name }}
+
+{{ description }}
+
+---
+
+## Dataset Overview
+
+- **Name**: `{{ name }}`
+- **Type**: Stream Data Generator
+{% if has_drift %}
+- **Drift Support**: Yes
+{% else %}
+- **Drift Support**: No
+{% endif %}
+
+---
+
+## Parameters
+
+{% if parameters %}
+| Parameter | Description |
+|-----------|-------------|
+{% for param in parameters %}
+| `{{ param.name }}` | {{ param.description }} |
+{% endfor %}
+{% else %}
+*No parameters defined.*
+{% endif %}
+
+---
+
+## Features
+
+{% if features %}
+| Feature | Type | Description | Formula | Drift |
+|---------|------|-------------|---------|-------|
+{% for feature in features %}
+| `{{ feature.name }}` | {{ feature.type if feature.type else 'auto' }} | {{ feature.description }} | `{{ feature.original_formula if feature.original_formula else feature.formula }}` | {% if 'drift' in feature %}✅{% else %}❌{% endif %} |
+{% endfor %}
+{% else %}
+*No features defined.*
+{% endif %}
+
+{% if features %}
+### Feature Details
+
+{% for feature in features %}
+#### {{ feature.name }}
+
+- **Description**: {{ feature.description }}
+- **Type**: {{ feature.type if feature.type else 'Inferred from formula' }}
+- **Formula**: `{{ feature.original_formula if feature.original_formula else feature.formula }}`
+{% if 'drift' in feature %}
+- **Drift Type**: {{ feature.drift.type }}
+- **Drift Formulas**:
+{% for df in feature.drift.formulas %}
+  - **{{ df.name if df.name else 'Formula ' ~ loop.index }}**: `{{ df.original_value if df.original_value else df.value }}`
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+---
+
+## Target Variable
+
+{% if target %}
+- **Name**: `{{ target.name }}`
+- **Type**: {{ target.classtype }}
+- **Description**: {{ target.description }}
+- **Formula**: `{{ target.original_formula if target.original_formula else target.formula }}`
+
+{% if 'drift' in target %}
+### Target Drift
+
+- **Drift Type**: {{ target.drift.type }}
+- **Drift Formulas**:
+{% for df in target.drift.formulas %}
+  - **{{ df.name if df.name else 'Formula ' ~ loop.index }}**: `{{ df.original_value if df.original_value else df.value }}`
+{% endfor %}
+{% endif %}
+{% else %}
+*No target defined.*
+{% endif %}
+
+---
+
+## 🚀 Usage
+
+### Installation
+
+```bash
+pip install -e .
+```
+
+### Basic Usage
+
+```python
+from {{ name.lower() }} import {{ name }}
+
+# Initialize generator
+{% if parameters %}
+gen = {{ name }}({% for param in parameters %}{{ param.name }}=value{% if not loop.last %}, {% endif %}{% endfor %})
+{% else %}
+gen = {{ name }}()
+{% endif %}
+
+# Generate samples
+for X, y in gen:
+    print(f"Features: {X}, Target: {y}")
+    # Process your data here
+```
+
+### Generate N Instances
+
+```python
+# Generate 1000 instances
+instances = list(gen.get_n_instances(1000))
+
+# Extract features and targets
+X_data = [x for x, y in instances]
+y_data = [y for x, y in instances]
+```
+
+{% if has_drift %}
+### Drift Simulation
+
+{% set has_feature_drift = namespace(value=false) %}
+{% for feature in features %}
+{% if 'drift' in feature %}
+{% set has_feature_drift.value = true %}
+{% endif %}
+{% endfor %}
+
+{% if has_feature_drift.value %}
+#### Data Drift
+
+```python
+# Trigger data drift on a specific feature
+{% for feature in features %}
+{% if 'drift' in feature %}
+gen.data_drift("{{ feature.name }}")
+{% endif %}
+{% endfor %}
+```
+{% endif %}
+
+{% if 'drift' in target %}
+#### Concept Drift
+
+```python
+# Trigger concept drift (change target formula)
+gen.concept_drift()
+```
+{% endif %}
+{% endif %}
+
+---
+
+## References
+
+{% if description %}
+See the dataset description above for relevant papers and citations.
+{% else %}
+*No references provided.*
+{% endif %}
+
+---

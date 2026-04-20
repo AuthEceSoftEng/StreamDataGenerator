@@ -1,0 +1,32 @@
+dataset CityTrafficStream
+    description: "A stream generator that simulates vehicle behavior in a city with changing traffic conditions."
+    
+    parameters
+        seed: "The seed of the random generator"
+    end_parameters
+    
+    features
+        string vehicle_type: UniformCategorical("car", "bus", "truck", "motorcycle"), "The type of the vehicle"
+        float speed: UniformFloat(0, 80), "Current speed of the vehicle in km/h"
+        string weather: UniformCategorical("clear", "rain", "fog"), "Current weather conditions"
+        float time_of_day: UniformFloat(0, 24), "The hour of the day (0-24)"
+        float traffic_density: UniformFloat(0, 1), "A normalized value representing traffic density (0=low, 1=high)"
+        string road_type: UniformCategorical("highway", "arterial", "local"), "The type of road the vehicle is on"
+    end_features
+    
+    target on_time_arrival: Binary
+        description: "Whether the vehicle reaches its destination on time"
+        formula: (speed > 50 and traffic_density < 0.5 and weather == "clear") or (speed > 30 and traffic_density < 0.3 and road_type != "local")
+    end_target
+    
+    drifts
+        drift on on_time_arrival
+            type: sudden, recurring
+            scenarios
+                (speed > 60 and traffic_density < 0.8) and (time_of_day < 7 or time_of_day > 19),
+                (speed > 40 and traffic_density < 0.2 and road_type == "highway")
+            end_scenarios
+        end_drift
+    end_drifts
+    
+end_dataset

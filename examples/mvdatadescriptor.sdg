@@ -1,0 +1,22 @@
+dataset MvDataGenerator
+    description: "Mv artificial dataset.\n\nArtificial dataset composed of both nominal and numeric features, whose features present co-dependencies. Originally described by Luís Torgo.\n\nThe features are generated using expressions with conditional logic and weighted random choices.\n\nReference: https://www.dcc.fc.up.pt/~ltorgo/Regression/mv.html"
+    parameters
+        seed: "Random seed number used for reproducibility"
+    end_parameters
+    features
+        float x1: UniformFloat(-5, 5), "Uniformly distributed over [-5, 5]"
+        float x2: UniformFloat(-15, -10), "Uniformly distributed over [-15, -10]"
+        string x3: "green" if x1 > 0 else ("red" if UniformFloat(0, 1) < 0.4 else "brown"), "Categorical: green if x1 > 0, else red (p=0.4) or brown (p=0.6)"
+        float x4: (x1 + 2 * x2) if x3 == "green" else (x1 / 2 if UniformFloat(0, 1) < 0.3 else x2 / 2), "Depends on x3: if green then x1 + 2*x2, else x1/2 (p=0.3) or x2/2 (p=0.7)"
+        float x5: UniformFloat(-1, 1), "Uniformly distributed over [-1, 1]"
+        float x6: x4 * UniformFloat(0, 5), "x4 multiplied by epsilon uniformly distributed over [0, 5]"
+        string x7: "yes" if UniformFloat(0, 1) < 0.3 else "no", "Categorical: yes (p=0.3) or no (p=0.7)"
+        string x8: "normal" if x5 < 0.5 else "large", "Categorical: normal if x5 < 0.5, else large"
+        float x9: UniformFloat(100, 500), "Uniformly distributed over [100, 500]"
+        float x10: UniformFloat(1000, 1200), "Uniformly distributed over [1000, 1200]"
+    end_features
+    target y: Scalar
+        description: "Regression target with conditional rules based on feature values"
+        formula: (35 - 0.5 * x4) if x2 > 2 else ((10 - 2 * x1) if (-2 <= x4 and x4 <= 2) else ((3 - x1 / x4) if (x7 == "yes" and x4 != 0) else ((x6 + x1) if x8 == "normal" else (x1 / 2))))
+    end_target
+end_dataset

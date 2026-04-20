@@ -1,0 +1,55 @@
+Dataset:
+    'dataset' name=ID
+        ('description:' description=STRING)?
+        ('parameters' parameters*=Parameter 'end_parameters')?
+        ('features' features*=Feature 'end_features')?
+        ('target' target=Target 'end_target')?
+        ('drifts' drifts*=Drift 'end_drifts')?
+    'end_dataset'
+;
+
+Parameter:
+    name=ID ':' description=STRING
+;
+
+Feature:
+    (type=FeatureType)? name=ID ':' formula=Formula 
+        (',' description=STRING)?
+;
+
+FeatureType:
+    'int' | 'float' | 'string' | 'bool'
+;
+
+Target:
+    name=ID ':' type=ID
+        'description:' description=STRING
+        'formula:' formula=Formula
+;
+
+Drift:
+    'drift' 'on' variable=ID
+        ('type:' drift_types+=DriftType[','] (',')?)?
+        'scenarios' scenarios+=Formula[','] (',')? 'end_scenarios'
+    'end_drift'
+;
+
+DriftType: 
+    'sudden' | 'gradual' | 'incremental' | 'recurring'
+;
+
+RunConfig:
+    arguments+=Argument[',']
+;
+
+Argument:
+    name=ID '=' value=Value
+;
+
+Value:
+    INT | FLOAT | STRING | BOOL
+;
+
+Formula:
+    /(?:[^,\n(]|\((?:[^()]|\((?:[^()]|\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))*\))*\))+/
+;

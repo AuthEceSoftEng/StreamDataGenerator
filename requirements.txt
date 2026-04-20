@@ -1,5 +1,10 @@
 arffutils
 matplotlib==3.6.0
-pandas==1.5.3
-PyYAML==5.4.1
+pandas==1.5.3textX[cli]
+regex
+PyYAML
+jinja2
+pandas
 regex==2022.9.13
+textX==4.3.0
+ruff

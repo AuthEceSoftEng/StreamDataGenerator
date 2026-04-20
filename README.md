@@ -1,80 +1,166 @@
-# StreamDataGenerator
-Generator that creates data stream generators.
+# Stream Data Generator DSL
+SDG is a formal **Domain-Specific Language (DSL)** for describing stream dataset generators,
+built using the [textX](https://textx.github.io/textX/) framework. This DSL provides a clean
+and structured way to define data streams, including different feature (and target) variables
+as well as drifts (data and concept).
+
+The main features of SDG are:
+- **Formal Grammar**: Robust syntax validation and error reporting.
+- **Concise Syntax**: Write less code to describe complex datasets.
+- **Type Safety**: Built-in validation for parameter types and formulas.
+- **Code Generation**: Automatically generate Python code for data generation.
+- **Tooling Support**: Integrated with the textX ecosystem (CLI, visualization).
+- **Drift Support**: Native syntax for defining data and concept drifts (using formula variations).
+
+## Installation
+Clone the repository and install the package in **editable mode**. This ensures all dependencies
+(including `textX` and `jinja2`) are installed correctly, while the installation also includes the
+`textX[cli]` extras, enabling the standard `textx` command-line tools.
+
+```bash
+pip install -e .
+```
+
+## DSL Syntax
+The DSL is designed to be readable and expressive. Blocks use explicit end markers.
+
+### Example
+```text
+dataset LoanDataGenerator
+
+    description: "Stream generator producing loan data"
+    
+    parameters
+        seed: "The seed of the random generator"
+    end_parameters
+    
+    features
+        float salary: UniformFloat(20000, 150000), "Salary of the applicant"
+        int age: UniformInteger(20, 80), "Age of the applicant"
+    end_features
+    
+    target loanapproval:Binary
+        description: "Loan Approval"
+        formula: salary > 40000 and age <= 40
+    end_target
+
+    drifts
+        drift on salary
+            type: sudden
+            scenarios
+                UniformFloat(10000, 40000),
+                UniformFloat(30000, 80000)
+            end_scenarios
+        end_drift
+    end_drifts
+
+end_dataset
+```
+
+### Language Constructs
+
+#### Dataset
+The top-level container for your generator definition.
+```text
+dataset MyGenerator
+    ...
+end_dataset
+```
+
+#### Parameters
+Define input arguments that can be passed to the generator at runtime.
+```text
+parameters
+    seed: "Random seed"
+    noise: "Noise level"
+end_parameters
+```
+
+#### Features
+Define the input features (attributes) of the data stream.
+Syntax: `[Type] name: formula[, "Description"]`
+```text
+features
+    int age: UniformInteger(18, 90), "User Age"
+    float income: Gaussian(50000, 10000), "Annual Income"
+    string status: UniformCategorical("active", "inactive"), "Status"
+end_features
+```
+
+Supported types for features are `int`, `float`, `string`, `bool`.
+
+Supported functions are:
+- `UniformFloat(min, max)`: Continuous uniform float between min and max
+- `UniformInteger(min, max)`: Discrete uniform integer between min and max
+- `Gaussian(mu, sigma)`: Normal distribution with mean and deviation
+- `UniformCategorical("val1", "val2", ...)`: Uniform random choice among categorical values
+
+#### Target
+Define the target variable (label) for supervised learning tasks.
+You must specify the type (`Binary`, `Categorical`, `Scalar`).
+```text
+target churn: Binary
+    description: "Customer Churn"
+    formula: age > 60 and income < 30000
+end_target
+```
+
+#### Drift
+Define concept or data drifts by specifying alternative formulas for a feature or target.
+Supported drift types include:
+- `sudden`: rapid shift where a new concept replaces the old
+- `gradual`: slow transition where old and new concepts temporarily coexist
+- `incremental`: small continuous changes that accumulate into a significant shift
+- `recurring`: concepts reappear periodically with seasonal patterns
+
+Drift grammar example:
+```text
+drift on age
+    type: sudden, gradual
+    scenarios
+        default: original_formula
+        alternative: new_formula_after_drift
+    end_scenarios
+end_drift
+```
 
 ## Usage
-First, install all required libraries using `pip install -r requirements.txt`  
-After that, run the following command to generate code for a dataset generator:
+The package provides a convenient `sdg` command for common tasks.
 
-```
-python dataset_generator.py --input input.yaml --output output.py --strict --gendoc
-```
+You can check if your `.sdg` file is syntactically and semantically correct, using the command:
 
-The input is a YAML descriptor file and the output is a data stream generator as a Python file.  
-The documentation page of the data stream generator can also be generated using the `--gendoc` option.  
-Also, using the `--strict` option instructs the generator to treat all warnings as errors.
-
-## Input format
-YAML descriptor file that is given as input must have the following format:
-
-```yaml
-
-dataset:
-  name: {{the name of the dataset generator}}
-  description: {{the description of the dataset generator, can be multi-line}}
-  imports: {{any required imports, e.g. math}}
-  parameters:
-    - name: seed
-      description: The seed of the random generator
-    - name: {{any required parameter}}
-      description: {{parameter description}}
-    - ...
-  features:
-    - name: {{the name of the first feature}}
-      description: {{description of the feature}}
-      formula: {{formula of the feature}}
-      drift:
-        type: changeformula
-        formulas:
-          - name: {{optional name of this data drift choice}}
-            value: {{formula of data drift choice}}
-          - ...
-    - name: {{the name of the second feature}}
-      description: {{description of the feature}}
-      formula: {{formula of the feature}}
-    - ...
-  target:
-    name: {{the name of the target variable}}
-    description: {{description of the target variable}}
-    classtype: {{type of the target, one of Binary, Categorical, Scalar}}
-    formula: {{formula of the target cariable}}
-    drift:
-      type: changeformula
-      formulas:
-        - name: {{optional name of this first concept drift choice}}
-          value: {{formula of concept drift choice}}
-        - name: {{optional name of this second concept drift choice}}
-          value: {{formula of concept drift choice}}
-        - ...
-  run:
-    arguments:
-      - name: seed
-        value: 42
-      - name: {{name of the second parameter}}
-        value: {{value of the second parameter}}
-      - ...
+```bash
+sdg validate examples/dataset.sdg
 ```
 
-Formulas can be written in standard Python code and refer to other variables. Moreover, they can include the functions:  
-- `UniformInteger(a, b)`: returns a random integer, uniformly distributed in range [a, b]
-- `UniformFloat(a, b)`: returns a random float, uniformly distributed in range [a, b]
-- `Gaussian(mu, sigma)`: returns a random float from a Gaussian distribution with parameters mu and sigma
-- `UniformCategorical(cat1, cat2, cat3, ...)`: returns one of the categories cat1, cat2, cat3, ... at random (uniformly)
+To generate the Python generator class from your DSL description, you can use the command:
 
-Examples of descriptor files can be found in folder [sdg/examples](sdg/examples).  
-You can run all examples using script `runexamples.py`
+```bash
+sdg generate datasetname.sdg
+```
+By default, this creates `datasetname.py` in the current directory.
+You can specify a custom output file as:
 
-## Other tools
-In folder tools, you may find useful scripts to test your dataset generators:  
-- Script `datarun.py` allows running the dataset generators and printing the data
-- Script `dataplot.py` allows plotting data from the dataset generators
-- Script `dataexport.py` allows exporting data from the dataset generators as CSV or ARFF files
+```bash
+sdg generate datasetname.sdg -o my_generator.py
+```
+
+Alternatively, since the language is registered with textX, you can use standard textX commands.
+Upon verifying that `sdg` is registered (using `textx list-languages` and `textx list-generators`),
+you can use the registered `sdg_gen` generator (e.g. `textx generate datasetname.sdg --target sdg_gen`).
+
+## 📂 Examples
+
+Check the `examples/` directory for sample `.sdg` files (short description):
+
+- `agrawal0datadescriptor.sdg` — classification generator with threshold-based rules.
+- `friedmandatadescriptor.sdg` — nonlinear regression generator using sinusoidal interactions.
+- `friedmandriftdescriptor.sdg` — Friedman regression with multiple concept drifts.
+- `loandatadescriptor.sdg` — loan approval rules with financial thresholds.
+- `mixeddatadescriptor.sdg` — mixed boolean/numeric data with abrupt drift.
+- `mvdatadescriptor.sdg` — multivariate dataset with conditional dependencies.
+- `staggerdatadescriptor.sdg` — boolean stagger concept (size/shape/color).
+
+## Semantic specification
+See file `OPERATIONAL_SEMANTICS.md` for the formal semantics of the DSL, 
+including syntax overview, evaluation model, and logic formalization.
