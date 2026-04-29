@@ -1,0 +1,22 @@
+title: "Stream Data Generator DSL"
+description: "A formal DSL for describing stream dataset generators with LLM-assisted authoring."
+baseurl: "/StreamDataGenerator"
+url: "https://authecesofteng.github.io"
+
+theme: minima
+
+header_pages:
+  - prerequisites.md
+  - dsl.md
+  - llm.md
+  - cite.md
+
+markdown: kramdown
+highlighter: rouge
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+github_username: AuthEceSoftEng
+repository: AuthEceSoftEng/StreamDataGenerator
