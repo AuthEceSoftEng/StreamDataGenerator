@@ -124,6 +124,8 @@ venv.bak/
 
 # mkdocs documentation
 /site
+_site
+Gemfile.lock
 
 # mypy
 .mypy_cache/
