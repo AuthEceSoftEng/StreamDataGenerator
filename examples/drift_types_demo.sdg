@@ -1,0 +1,35 @@
+dataset DriftTypesDemo
+    description: "Demonstration of gradual, incremental, and recurring drift types within a single stream definition.\n\nGradual drift on sensor_a: the distribution switches probabilistically from N(50,5) to N(70,5) over a configurable number of instances.\nIncremental drift on sensor_b: the mean shifts linearly from 30 to 50 over the transition period.\nRecurring drift on status: the classification boundary periodically alternates between two formulas at configurable intervals."
+    parameters
+        seed: "Random seed for reproducibility"
+    end_parameters
+    features
+        float sensor_a: Gaussian(50, 5), "Primary sensor reading; drifts gradually from N(50,5) to N(70,5)"
+        float sensor_b: Gaussian(30, 3), "Secondary sensor reading; drifts incrementally from mean 30 to mean 50"
+        float noise: Gaussian(0, 1), "Additive Gaussian noise term"
+    end_features
+    target status: Binary
+        description: "System status: 0=normal, 1=warning. Classification boundary changes recurringly."
+        formula: (sensor_a + noise) > 60
+    end_target
+    drifts
+        drift on sensor_a
+            type: gradual
+            scenarios
+                Gaussian(70, 5)
+            end_scenarios
+        end_drift
+        drift on sensor_b
+            type: incremental
+            scenarios
+                Gaussian(50, 3)
+            end_scenarios
+        end_drift
+        drift on status
+            type: recurring
+            scenarios
+                (sensor_b + noise) > 45
+            end_scenarios
+        end_drift
+    end_drifts
+end_dataset
