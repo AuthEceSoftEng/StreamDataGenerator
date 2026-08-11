@@ -120,7 +120,8 @@ class {{ name }}:
         count (self._instance_count). For 'sudden' and 'recurring' drifts the
         generator switches to the chosen scenario immediately; for 'gradual'
         and 'incremental' a transition occurs over `transition_steps` samples.
-        If `scenario_idx` is None, a random non-zero scenario will be selected.
+        If `scenario_idx` is None, a random scenario will be selected,
+        excluding any currently active scenario for the same feature.
         For recurring drifts, `interval` and `duration` control periodic activation.
 
         Parameters
@@ -144,7 +145,16 @@ class {{ name }}:
             raise ValueError(f"Drift type '{drift_type}' not allowed for '{feature_name}'")
         if scenario_idx is not None and (scenario_idx < 0 or scenario_idx >= cfg["n_scenarios"]):
             raise ValueError(f"Invalid scenario index {scenario_idx}")
-        current_scenario_index = scenario_idx if scenario_idx is not None else self._rng.randint(1, cfg["n_scenarios"] - 1)
+        if scenario_idx is None:
+            active_indices = {ds["current_scenario_index"] for ds in self._drift_state[feature_name] if ds["active"]}
+            if not active_indices:
+                active_indices.add(0)  # base formula is implicitly active
+            available = [i for i in range(cfg["n_scenarios"]) if i not in active_indices]
+            if not available:
+                raise ValueError(f"No available scenarios for '{feature_name}'")
+            current_scenario_index = self._rng.choice(available)
+        else:
+            current_scenario_index = scenario_idx
         drift_state = {
             "active": True,
             "drift_point": self._instance_count,
@@ -165,15 +175,23 @@ class {{ name }}:
 
     {%- if has_recurring %}
     def _check_drifts(self):
+        """Automatically cycle recurring drifts based on interval/duration."""
         for feature_name, drift_states in self._drift_state.items():
             for drift_state in drift_states:
-                if drift_state["active"] and drift_state["drift_type"] == "recurring" and self._instance_count - drift_state["recurring_start"] >= drift_state["recurring_duration"]:
-                    drift_state["active"] = False
+                if drift_state["drift_type"] == "recurring":
+                    elapsed = self._instance_count - drift_state["recurring_start"]
+                    cycle_pos = elapsed % drift_state["recurring_interval"]
+                    drift_state["active"] = cycle_pos < drift_state["recurring_duration"]
     {%- endif %}
 
     def _get_val(self, name, features_dict):
         """Get value considering drift."""
-        active_drift = next((drift_state for drift_state in reversed(self._drift_state.get(name, [])) if drift_state["active"]), None)
+        drifts_for_name = self._drift_state.get(name, [])
+        # Prefer an active recurring drift (periodic overrides other types)
+        active_drift = next((ds for ds in reversed(drifts_for_name) if ds["active"] and ds["drift_type"] == "recurring"), None)
+        if not active_drift:
+            # Fall back to most recently activated active drift of any type
+            active_drift = next((ds for ds in reversed(drifts_for_name) if ds["active"]), None)
         if not active_drift:
             return self._gen(name, features_dict)
         drift_type = active_drift["drift_type"]

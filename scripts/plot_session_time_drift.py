@@ -69,30 +69,32 @@ indices = np.array(indices)
 # Create the plot
 # ---------------------------------------------------------------------------
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), gridspec_kw={"height_ratios": [2, 1]})
+fig.subplots_adjust(hspace=0.30)
 
 # Top panel: scatter plot of session_time over instance index
 ax1.scatter(indices, session_times, s=2, alpha=0.5, c="steelblue", label="session_time")
 ax1.axvline(x=DRIFT_POINT, color="red", linestyle="--", linewidth=2,
             label=f"Drift applied at instance {DRIFT_POINT}")
-ax1.set_xlabel("Instance index", fontsize=12)
 ax1.set_ylabel("session_time (minutes)", fontsize=12)
 ax1.set_title("session_time before and after sudden drift\n"
-              "(Gaussian(20,8) -> Gaussian(35,10))", fontsize=14, fontweight="bold")
+              "(Gaussian(20,8) -> Gaussian(35,10))", fontsize=16, fontweight="bold")
+ax1.tick_params(axis="x", labelbottom=False)
 ax1.grid(True, alpha=0.3)
 
 # Shaded regions for pre/post drift
 ax1.axvspan(0, DRIFT_POINT, alpha=0.08, color="green", label="Pre-drift: N(20, 8)")
 ax1.axvspan(DRIFT_POINT, TOTAL_INSTANCES, alpha=0.08, color="orange", label="Post-drift: N(35, 10)")
-ax1.legend(fontsize=11, loc="upper right")
+ax1.legend(fontsize=14, loc="lower right", framealpha=0.8)
 
 # Bottom panel: rolling mean (window=50)
 rolling_mean = pd.Series(session_times).rolling(window=50, min_periods=1).mean()
 ax2.plot(indices, rolling_mean, color="darkred", linewidth=2,
          label="Rolling mean (window=50)")
 ax2.axvline(x=DRIFT_POINT, color="red", linestyle="--", linewidth=2)
-ax2.set_xlabel("Instance index", fontsize=12)
+ax2.set_xlabel("Instance index", fontsize=13)
 ax2.set_ylabel("Rolling mean of session_time", fontsize=12)
-ax2.legend(fontsize=11)
+ax2.legend(fontsize=14, loc="lower right", framealpha=0.8)
+ax2.tick_params(axis="x", labelsize=12)
 ax2.grid(True, alpha=0.3)
 
 # Statistics annotation

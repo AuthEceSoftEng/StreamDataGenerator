@@ -1,0 +1,37 @@
+dataset ECommerceAnalyticsGenerator
+    description: "A data stream generator about customer activity on an e-commerce analytics platform."
+    parameters
+        seed: "The seed of the random generator"
+    end_parameters
+    features
+        int age: UniformInteger(18, 70), "Age of the customer"
+        float session_time: Gaussian(20, 8), "Session time in minutes"
+        float browsing_depth: Gaussian(5, 2), "Browsing depth (number of pages visited)"
+        float response_time: Gaussian(2.0, 0.5), "Server response time in seconds"
+        string device_type: UniformCategorical("mobile", "desktop", "tablet"), "Device type used by the customer"
+    end_features
+    target purchase: Binary
+        description: "Whether a purchase was made"
+        formula: session_time > 15 and age < 60
+    end_target
+    drifts
+        drift on session_time
+            type: sudden
+            scenarios
+                Gaussian(35, 10)
+            end_scenarios
+        end_drift
+        drift on response_time
+            type: incremental, recurring
+            scenarios
+                Gaussian(4.5, 0.5), Gaussian(6.0, 0.5)
+            end_scenarios
+        end_drift
+        drift on purchase
+            type: gradual
+            scenarios
+                session_time > 25 and age < 55
+            end_scenarios
+        end_drift
+    end_drifts
+end_dataset

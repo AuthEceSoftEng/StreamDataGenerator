@@ -1,4 +1,4 @@
-dataset DriftTypesDemo
+dataset DriftTypesDemoGenerator
     description: "Demonstration of gradual, incremental, and recurring drift types within a single stream definition.\n\nGradual drift on sensor_a: the distribution switches probabilistically from N(50,5) to N(70,5) over a configurable number of instances.\nIncremental drift on sensor_b: the mean shifts linearly from 30 to 50 over the transition period.\nRecurring drift on status: the classification boundary periodically alternates between two formulas at configurable intervals."
     parameters
         seed: "Random seed for reproducibility"
